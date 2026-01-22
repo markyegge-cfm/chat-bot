@@ -1,3 +1,20 @@
+/* Sticky Join Conversation bar for mobile */
+@media (max-width: 768px) {
+  .join-conversation-bar {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    z-index: 10;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
+  }
+  .responsive-conversation-chat {
+    min-height: 0;
+    max-height: calc(100vh - 70px - 80px); /* header + button */
+    overflow-y: auto;
+  }
+}
 /* ============================================
    THEME & VARIABLES
    ============================================ */

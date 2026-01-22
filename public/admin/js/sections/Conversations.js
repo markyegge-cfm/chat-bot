@@ -184,12 +184,12 @@ class Conversations {
 
           </div>
 
-          <!-- Bottom Action -->
-          <div class="p-8 border-t border-gray-100">
-             <button class="w-full bg-[#E5A000] hover:bg-[#D49000] text-white font-bold py-4 rounded-xl shadow-sm transition-all text-[15px]">
-               Join Conversation
-             </button>
-          </div>
+               <!-- Bottom Action -->
+               <div class="join-conversation-bar p-8 border-t border-gray-100">
+                   <button class="w-full bg-[#E5A000] hover:bg-[#D49000] text-white font-bold py-4 rounded-xl shadow-sm transition-all text-[15px]">
+                      Join Conversation
+                   </button>
+               </div>
         </div>
       </div>
     `;
