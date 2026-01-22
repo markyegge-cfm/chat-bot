@@ -49,18 +49,21 @@
 
 <body class="antialiased text-slate-800">
 
-  <div id="app" class="flex min-h-screen">
+  <div id="app" class="admin-container">
+    <!-- Sidebar Overlay (Mobile) -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
     <!-- Sidebar Container -->
     <div id="sidebar-container"></div>
 
     <!-- Main Content Wrapper -->
-    <div class="flex-1 ml-[260px] flex flex-col min-w-0">
+    <div class="main-content">
 
       <!-- Header Container -->
       <div id="header-container"></div>
 
       <!-- Page Content Container -->
-      <main id="content-container" class="flex-1 overflow-x-hidden overflow-y-auto">
+      <main id="content-container" class="page-content">
         <!-- Content injected here -->
       </main>
     </div>

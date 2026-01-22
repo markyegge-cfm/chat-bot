@@ -1,16 +1,16 @@
 class Conversations {
    static render() {
       return `
-      <div class="flex h-[calc(100vh-70px)] bg-white">
+      <div class="flex h-[calc(100vh-70px)] bg-white responsive-conversations-container">
         <!-- Messages Sidebar (Left) -->
-        <div class="w-[380px] flex flex-col border-r border-gray-100 flex-shrink-0">
+        <div class="w-[380px] flex flex-col border-r border-gray-100 flex-shrink-0 responsive-conversations-list">
           <div class="p-8 pb-4">
             <h2 class="text-[20px] font-bold text-gray-900 tracking-tight">Messages</h2>
           </div>
           
           <div class="flex-1 overflow-y-auto pl-4 space-y-2 pr-0">
             <!-- Active Conversation -->
-            <div class="group flex items-start gap-4 p-4 rounded-l-2xl rounded-r-none bg-gray-100 cursor-pointer border-transparent hover:bg-gray-100 transition-all relative overflow-hidden mr-0">
+            <div class="group flex items-start gap-4 p-4 rounded-l-2xl rounded-r-none bg-gray-100 cursor-pointer border-transparent hover:bg-gray-100 transition-all relative overflow-hidden mr-0 conversation-item active" data-conversation-id="73c72">
                
                <div class="relative">
                  <div class="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 shadow-sm">
@@ -28,7 +28,7 @@ class Conversations {
             </div>
 
             <!-- Conversation Item -->
-            <div class="group flex items-start gap-4 p-4 rounded-l-2xl rounded-r-none hover:bg-gray-50 cursor-pointer transition-all border-l-4 border-transparent mr-0">
+            <div class="group flex items-start gap-4 p-4 rounded-l-2xl rounded-r-none hover:bg-gray-50 cursor-pointer transition-all border-l-4 border-transparent mr-0 conversation-item" data-conversation-id="18nc23">
                <div class="relative">
                  <div class="w-10 h-10 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
                    #1
@@ -45,7 +45,7 @@ class Conversations {
             </div>
 
             <!-- Conversation Item -->
-            <div class="group flex items-start gap-4 p-4 rounded-l-2xl rounded-r-none hover:bg-gray-50 cursor-pointer transition-all border-l-4 border-transparent mr-0">
+            <div class="group flex items-start gap-4 p-4 rounded-l-2xl rounded-r-none hover:bg-gray-50 cursor-pointer transition-all border-l-4 border-transparent mr-0 conversation-item" data-conversation-id="marus">
                <div class="relative">
                  <div class="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
                    MA
@@ -62,7 +62,7 @@ class Conversations {
             </div>
 
             <!-- Conversation Item -->
-            <div class="group flex items-start gap-4 p-4 rounded-l-2xl rounded-r-none hover:bg-gray-50 cursor-pointer transition-all border-l-4 border-transparent mr-0">
+            <div class="group flex items-start gap-4 p-4 rounded-l-2xl rounded-r-none hover:bg-gray-50 cursor-pointer transition-all border-l-4 border-transparent mr-0 conversation-item" data-conversation-id="431gv9">
                <div class="relative">
                  <div class="w-10 h-10 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
                    #4
@@ -80,9 +80,15 @@ class Conversations {
         </div>
 
         <!-- Chat Area (Right) -->
-        <div class="flex-1 flex flex-col min-w-0 bg-white">
-          <!-- Messages Feed -->
-          <div class="flex-1 overflow-y-auto p-8 space-y-8">
+            <div class="flex-1 flex flex-col min-w-0 bg-white responsive-conversation-chat">
+               <!-- Mobile header (Back button + Title) -->
+               <div class="conversation-mobile-header" style="display:none; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #E2E8F0;">
+                  <button class="back-to-list-btn" aria-label="Back to list" style="background:transparent;border:none;font-size:18px;cursor:pointer;padding:6px;">&larr;</button>
+                  <h3 class="conversation-title" style="margin:0;font-size:16px;font-weight:600;">#73c72</h3>
+                  <div style="width:32px;"></div>
+               </div>
+               <!-- Messages Feed -->
+               <div class="flex-1 overflow-y-auto p-8 space-y-8">
             
             <!-- User Message -->
             <div class="flex justify-end mb-8">
@@ -187,5 +193,58 @@ class Conversations {
         </div>
       </div>
     `;
+   }
+
+   static afterRender() {
+      this.setupConversationListeners();
+   }
+
+   static setupConversationListeners() {
+      const conversationItems = document.querySelectorAll('.conversation-item');
+      const conversationList = document.querySelector('.responsive-conversations-list');
+      const conversationChat = document.querySelector('.responsive-conversation-chat');
+      const mobileHeader = document.querySelector('.conversation-mobile-header');
+      const backBtn = mobileHeader && mobileHeader.querySelector('.back-to-list-btn');
+
+      // Helper to detect mobile at action time
+      const isMobile = () => window.innerWidth <= 768;
+
+      conversationItems.forEach(item => {
+         item.addEventListener('click', () => {
+            conversationItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+
+            // Update mobile header title if present
+            const titleEl = document.querySelector('.conversation-title');
+            const h3 = item.querySelector('h3');
+            if (titleEl && h3) titleEl.textContent = h3.textContent;
+
+            if (isMobile()) {
+               // Use classes so CSS !important rules don't block us
+               conversationList.classList.add('hidden');
+               conversationChat.classList.add('show');
+               if (mobileHeader) mobileHeader.style.display = 'flex';
+            }
+         });
+      });
+
+      if (backBtn) {
+         backBtn.addEventListener('click', () => {
+            if (isMobile()) {
+               conversationList.classList.remove('hidden');
+               conversationChat.classList.remove('show');
+               if (mobileHeader) mobileHeader.style.display = 'none';
+            }
+         });
+      }
+
+      // Handle window resize: reset to desktop layout when leaving mobile
+      window.addEventListener('resize', () => {
+         if (!isMobile()) {
+            conversationList.classList.remove('hidden');
+            conversationChat.classList.remove('show');
+            if (mobileHeader) mobileHeader.style.display = 'none';
+         }
+      });
    }
 }

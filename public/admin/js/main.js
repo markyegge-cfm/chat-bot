@@ -15,6 +15,9 @@ class AdminApp {
         // Setup Navigation Listeners
         this.setupNavigation();
 
+        // Setup Mobile Menu
+        this.setupMobileMenu();
+
         // Load Default Section (Conversations)
         this.loadSection('conversations');
     }
@@ -46,8 +49,59 @@ class AdminApp {
 
                 // Load Section
                 this.loadSection(page);
+
+                // Close mobile menu after navigation
+                this.closeMobileMenu();
             }
         });
+    }
+
+    setupMobileMenu() {
+        const menuToggle = document.getElementById('mobile-menu-toggle');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        if (menuToggle) {
+            menuToggle.addEventListener('click', () => {
+                this.toggleMobileMenu();
+            });
+        }
+
+        if (overlay) {
+            overlay.addEventListener('click', () => {
+                this.closeMobileMenu();
+            });
+        }
+
+        // Close mobile menu on window resize to desktop
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                this.closeMobileMenu();
+            }
+        });
+    }
+
+    toggleMobileMenu() {
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        if (sidebar) {
+            sidebar.classList.toggle('open');
+        }
+        if (overlay) {
+            overlay.classList.toggle('open');
+        }
+    }
+
+    closeMobileMenu() {
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        if (sidebar) {
+            sidebar.classList.remove('open');
+        }
+        if (overlay) {
+            overlay.classList.remove('open');
+        }
     }
 
     loadSection(sectionName) {

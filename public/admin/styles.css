@@ -898,8 +898,31 @@ textarea.form-control {
 }
 
 /* ============================================
+   MOBILE MENU TOGGLE
+   ============================================ */
+.mobile-menu-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--dark);
+  cursor: pointer;
+  padding: 8px;
+  font-size: 24px;
+  z-index: 101;
+}
+
+.mobile-menu-toggle:hover {
+  background: var(--light);
+  border-radius: 8px;
+}
+
+
+
+/* ============================================
    RESPONSIVE DESIGN
    ============================================ */
+
+/* Tablet - Large */
 @media (max-width: 1024px) {
   .sidebar {
     width: 240px;
@@ -909,58 +932,640 @@ textarea.form-control {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .page-header {
+    padding: 16px 24px;
+  }
+
+  .page-content {
+    padding: 24px;
+  }
+
+  .card {
+    padding: 20px;
+  }
+
+  .stat-card {
+    padding: 20px;
+  }
 }
 
+/* Tablet - Medium (iPad & similar) */
 @media (max-width: 768px) {
+  :root {
+    --sidebar-width: 0px;
+  }
+
+  .admin-container {
+    flex-direction: column;
+  }
+
+  .mobile-menu-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .sidebar {
+    position: fixed;
+    width: 260px;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    z-index: 1000;
     transform: translateX(-100%);
-    transition: transform 0.3s ease;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.15);
   }
 
   .sidebar.open {
     transform: translateX(0);
   }
 
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
+
+  .sidebar-overlay.open {
+    display: block;
+  }
+
   .main-content {
     margin-left: 0;
+    width: 100%;
+  }
+
+  .page-header {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .page-header h1 {
+    font-size: 20px;
+    margin: 0;
+  }
+
+  .header-right {
+    gap: 12px;
+    font-size: 13px;
+  }
+
+  .health-status {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+
+  .page-content {
+    padding: 16px;
   }
 
   .stats-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
   }
 
-  .page-header {
-    padding: 16px 20px;
+  .stat-card {
+    padding: 16px;
   }
 
-  .page-content {
-    padding: 20px;
+  .stat-value {
+    font-size: 28px;
   }
 
-  .modal {
-    max-width: 100%;
-    margin: 20px;
-  }
-}
-
-@media (max-width: 480px) {
-  .page-header {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
+  .stat-label {
+    font-size: 12px;
   }
 
-  .header-right {
-    width: 100%;
-    justify-content: space-between;
+  .card {
+    padding: 16px;
+    margin-bottom: 16px;
+    border-radius: 8px;
   }
 
-  .modal-footer {
-    flex-direction: column;
+  .card-title {
+    font-size: 16px;
+    margin-bottom: 16px;
+  }
+
+  .table {
+    font-size: 13px;
+  }
+
+  .table th,
+  .table td {
+    padding: 12px;
+  }
+
+  .table th {
+    font-size: 11px;
+  }
+
+  .table tbody tr:hover {
+    background: transparent;
   }
 
   .btn {
+    padding: 8px 16px;
+    font-size: 13px;
     width: 100%;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+  }
+
+  .modal {
+    max-width: calc(100% - 20px);
+    margin: 0 10px;
+    border-radius: 12px;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .modal-header {
+    padding: 16px;
+  }
+
+  .modal-footer {
+    padding: 16px;
+    gap: 8px;
+    flex-direction: column;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-label {
+    font-size: 12px;
+  }
+
+  .form-control {
+    padding: 10px 12px;
+    font-size: 16px;
+    /* Prevents zoom on iOS */
+  }
+
+  .upload-area {
+    padding: 32px 16px;
+    border-radius: 8px;
+  }
+
+  .upload-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .upload-text {
+    font-size: 14px;
+  }
+
+  .upload-hint {
+    font-size: 12px;
+  }
+
+  .alert {
+    padding: 12px;
+    font-size: 13px;
+  }
+
+  .placeholder-content {
+    padding: 40px 20px;
+  }
+
+  .placeholder-icon {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* Mobile - Small (Portrait phones) */
+@media (max-width: 640px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 12px;
+  }
+
+  .page-header h1 {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+
+  .header-right {
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .health-status {
     justify-content: center;
+    width: 100%;
+  }
+
+  .user-info {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .page-content {
+    padding: 12px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+  }
+
+  .stat-trend {
+    font-size: 12px;
+  }
+
+  .card {
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+  }
+
+  .card-title {
+    font-size: 15px;
+    margin-bottom: 12px;
+  }
+
+  .table {
+    font-size: 12px;
+  }
+
+  .table th,
+  .table td {
+    padding: 8px;
+  }
+
+  .table th {
+    font-size: 10px;
+  }
+
+  .badge {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .btn {
+    padding: 8px 12px;
+    font-size: 12px;
+    width: 100%;
+    height: 44px;
+    /* Min touch target */
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+  }
+
+  .modal {
+    max-width: calc(100% - 16px);
+    margin: 0 8px;
+  }
+
+  .modal-header {
+    padding: 12px;
+  }
+
+  .modal-title {
+    font-size: 18px;
+  }
+
+  .modal-body {
+    padding: 12px;
+  }
+
+  .modal-footer {
+    padding: 12px;
+    flex-direction: column;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+
+  .form-label {
+    font-size: 11px;
+  }
+
+  .form-control {
+    padding: 10px 12px;
+    font-size: 16px;
+  }
+
+  .upload-area {
+    padding: 24px 12px;
+    border-radius: 8px;
+  }
+
+  .upload-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .upload-text {
+    font-size: 13px;
+  }
+
+  .upload-hint {
+    font-size: 11px;
+  }
+
+  .alert {
+    padding: 10px;
+    font-size: 12px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .placeholder-content {
+    padding: 30px 15px;
+    border-radius: 8px;
+  }
+
+  .placeholder-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .placeholder-content p {
+    font-size: 13px;
+  }
+
+  /* Responsive Sidebar Navigation */
+  .sidebar-header {
+    padding: 20px 16px 16px;
+  }
+
+  .nav-item {
+    padding: 10px 12px;
+    font-size: 13px;
+    gap: 8px;
+  }
+
+  .nav-item svg,
+  .nav-item img {
+    width: 18px;
+    height: 18px;
+  }
+
+  .sidebar-footer {
+    padding: 16px 12px;
+    gap: 8px;
+  }
+
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+
+  .user-name {
+    font-size: 12px;
+  }
+
+  .user-email {
+    font-size: 10px;
+  }
+
+  .logout-icon-btn {
+    padding: 6px;
+  }
+}
+
+/* Mobile - Extra Small (Smaller phones) */
+@media (max-width: 480px) {
+  .page-header {
+    padding: 10px 8px;
+  }
+
+  .page-header h1 {
+    font-size: 16px;
+  }
+
+  .page-content {
+    padding: 8px;
+  }
+
+  .stats-grid {
+    gap: 8px;
+  }
+
+  .stat-card {
+    padding: 10px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+  }
+
+  .card {
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  .card-title {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+
+  .table {
+    font-size: 11px;
+  }
+
+  .table th,
+  .table td {
+    padding: 6px 4px;
+  }
+
+  .btn {
+    padding: 8px 10px;
+    font-size: 11px;
+    height: 40px;
+  }
+
+  .modal {
+    max-width: calc(100% - 12px);
+    margin: 0 6px;
+    max-height: 95vh;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 10px;
+  }
+
+  .form-control {
+    font-size: 16px;
+    padding: 10px;
+  }
+
+  .upload-area {
+    padding: 20px 8px;
+  }
+
+  .alert {
+    padding: 8px;
+    font-size: 11px;
+  }
+
+  .nav-label {
+    font-size: 11px;
+  }
+
+  .nav-item {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (max-height: 500px) and (orientation: landscape) {
+  .sidebar {
+    height: auto;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+
+  .page-header {
+    padding: 8px 16px;
+  }
+
+  .page-content {
+    padding: 12px 16px;
+  }
+
+  .stats-grid {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .card {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    height: 36px;
+  }
+}
+
+/* ============================================
+   CONVERSATIONS RESPONSIVE (Tailwind-based)
+   ============================================ */
+
+/* Tablet - Medium (768px and below) */
+@media (max-width: 768px) {
+  .responsive-conversations-container {
+    flex-direction: column !important;
+    height: auto !important;
+  }
+
+  .responsive-conversations-list {
+    width: 100% !important;
+    max-height: 60vh;
+    border-right: none !important;
+    border-bottom: 1px solid #E2E8F0;
+  }
+
+  .responsive-conversation-chat {
+    display: none !important;
+    max-height: 40vh;
+    width: 100% !important;
+  }
+
+  .responsive-conversation-chat.show {
+    display: flex !important;
+  }
+}
+
+/* Mobile Portrait - Small screens */
+@media (max-width: 640px) {
+  .responsive-conversations-list {
+    max-height: 65vh;
+  }
+
+  .responsive-conversation-chat {
+    max-height: 35vh;
+  }
+
+  .responsive-conversations-list .p-8 {
+    padding: 16px !important;
+  }
+
+  .responsive-conversations-list .text-\[20px\] {
+    font-size: 16px !important;
+  }
+}
+
+/* Mobile Extra Small */
+@media (max-width: 480px) {
+  .responsive-conversations-list {
+    max-height: 70vh;
+  }
+
+  .responsive-conversation-chat {
+    max-height: 30vh;
+  }
+
+  .responsive-conversations-list .p-8 {
+    padding: 12px !important;
+  }
+
+  .responsive-conversations-list .pl-4 {
+    padding-left: 8px !important;
+  }
+
+  .responsive-conversations-list .text-\[20px\] {
+    font-size: 14px !important;
+  }
+
+  .responsive-conversations-list .text-\[13px\] {
+    font-size: 11px !important;
+  }
+
+  .responsive-conversations-list .text-\[14px\] {
+    font-size: 12px !important;
   }
 }

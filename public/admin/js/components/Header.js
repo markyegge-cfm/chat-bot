@@ -2,6 +2,11 @@ class Header {
   static render() {
     return `
       <header class="h-[64px] bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-40">
+        <!-- Mobile Menu Toggle (hidden on desktop) -->
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle menu">
+          ☰
+        </button>
+
         <!-- Left: System Status -->
         <div class="flex items-center gap-2.5 text-[13px] font-medium text-gray-600">
           <span class="w-2 h-2 rounded-full bg-[#27ae60] shadow-[0_0_0_3px_rgba(39,174,96,0.15)]"></span>

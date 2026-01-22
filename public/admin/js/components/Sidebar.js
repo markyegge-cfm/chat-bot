@@ -11,7 +11,7 @@ class Sidebar {
 
         <!-- Menu Section -->
         <div class="nav-section">
-          <div class="nav-label">Home</div>
+          <div class="nav-label">Menu</div>
           <nav class="sidebar-nav">
             <a href="#" data-page="dashboard" class="nav-item">
               <img src="../image/dashboard.svg" alt="Dashboard" width="24" height="24">
