@@ -41,7 +41,7 @@
         </div>
 
         <div class="chatbot-messages" id="chatbot-messages">
-          <div class="chat-intro-text">Ask us anything, or share your feedback.</div>
+          <div class="chat-intro-text">Welcome to our Website! Ask us anything.</div>
           <div class="chatbot-message bot-message">
             <p>Hi! How can I support you today?</p>
           </div>
@@ -216,6 +216,159 @@
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
         cursor: pointer;
         border: none;
+      }
+
+      /* Mobile Responsive Styles */
+      @media (max-width: 768px) {
+        #ai-chatbot-widget {
+          bottom: 16px;
+          right: 16px;
+        }
+
+        .chatbot-window {
+          width: calc(100vw - 32px);
+          max-width: 410px;
+          height: calc(100vh - 100px);
+          max-height: 705px;
+          bottom: 64px;
+        }
+
+        .chatbot-messages {
+          padding: 16px 16px;
+          gap: 10px;
+        }
+
+        .chat-intro-text {
+          font-size: 13px;
+          margin: 6px 0 12px 0;
+        }
+
+        .chatbot-message {
+          max-width: 90%;
+        }
+
+        .chatbot-message p {
+          font-size: 14px;
+          padding: 10px 16px;
+        }
+
+        .message-metadata {
+          font-size: 11px;
+          margin-top: 4px;
+        }
+
+        .chatbot-input-wrapper {
+          margin: 0 16px 16px 16px;
+          padding: 6px 6px 6px 16px;
+          height: 48px;
+        }
+
+        .chatbot-input {
+          font-size: 14px;
+        }
+
+        .chatbot-send-btn {
+          width: 36px;
+          height: 36px;
+        }
+
+        .chatbot-send-btn svg {
+          width: 18px;
+          height: 18px;
+        }
+
+        .icon-btn svg {
+          width: 16px;
+          height: 16px;
+        }
+
+        .chatbot-header {
+          height: 64px;
+          padding: 0 16px;
+          gap: 8px;
+        }
+
+        .header-logo {
+          width: 32px;
+          height: 32px;
+        }
+
+        .header-title {
+          font-size: 16px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        #ai-chatbot-widget {
+          bottom: 12px;
+          right: 12px;
+        }
+
+        .chatbot-window {
+          width: calc(100vw - 24px);
+          bottom: 60px;
+        }
+
+        .chatbot-toggle {
+          width: 48px;
+          height: 48px;
+        }
+
+        .chatbot-toggle svg {
+          width: 20px;
+          height: 20px;
+        }
+
+        .chatbot-header {
+          height: 56px;
+          padding: 0 12px;
+        }
+
+        .header-logo {
+          width: 28px;
+          height: 28px;
+        }
+
+        .header-logo img {
+          width: 28px !important;
+          height: 28px !important;
+        }
+
+        .header-title {
+          font-size: 14px;
+        }
+
+        .chat-intro-text {
+          font-size: 12px;
+        }
+
+        .chatbot-message p {
+          font-size: 13px;
+          padding: 8px 14px;
+        }
+
+        .message-metadata {
+          font-size: 10px;
+        }
+
+        .chatbot-input-wrapper {
+          margin: 0 12px 12px 12px;
+          padding: 4px 4px 4px 14px;
+          height: 44px;
+        }
+
+        .chatbot-input {
+          font-size: 13px;
+        }
+
+        .chatbot-send-btn {
+          width: 36px;
+          height: 36px;
+        }
+
+        .icon-btn {
+          padding: 2px;
+        }
       }
     `;
     document.head.appendChild(style);

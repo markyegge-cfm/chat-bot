@@ -5,10 +5,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Login - AI Chatbot</title>
+  
+  <!-- Google Fonts - Outfit -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
   <style>
     :root {
-      --primary: #CA9D2B;
-      --primary-dark: #b88621;
+      --primary: #E5A000;
+      --primary-dark: #D49000;
       --bg-navy: #0F172A;
       --card-bg: #FFFFFF;
       --text-dark: #1E293B;
@@ -25,25 +29,12 @@
     body {
       width: 100%;
       height: 100vh;
-      /* Enhanced gradient depth */
-      background: radial-gradient(circle at top right, #1e293b, #0f172a);
+      background: #FFFFFF;
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
       overflow: hidden;
-    }
-
-    /* Decorative background element */
-    body::after {
-      content: "";
-      position: absolute;
-      width: 400px;
-      height: 400px;
-      background: var(--primary);
-      filter: blur(150px);
-      opacity: 0.08;
-      z-index: 0;
     }
 
     .login-container {
@@ -56,15 +47,15 @@
 
     .login-card {
       background: var(--card-bg);
-      border-radius: 24px;
+      border-radius: 0;
       padding: 48px 40px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: none;
+      border: none;
     }
 
     .login-header {
       text-align: center;
-      margin-bottom: 32px;
+      margin-bottom: 40px;
     }
 
     .login-logo {
@@ -77,65 +68,80 @@
       justify-content: center;
     }
 
-    .login-logo img {
-      max-width: 200px;
-      height: auto;
+    .login-logo-icon {
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
     }
 
-    /* Modern SVG Robot Icon */
-    /* Removed old SVG styles */
+    .login-logo-icon svg {
+      width: auto;
+      height: 56px;
+    }
 
     .login-title {
-      font-size: 28px;
-      font-weight: 800;
-      color: var(--bg-navy);
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text-dark);
       margin-bottom: 8px;
-      letter-spacing: -0.5px;
+      letter-spacing: 0;
     }
 
     .login-subtitle {
       font-size: 14px;
       color: var(--text-gray);
-      font-weight: 500;
+      font-weight: 400;
     }
 
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 24px;
     }
 
     .form-group label {
       display: block;
-      font-size: 13px;
-      font-weight: 700;
+      font-size: 14px;
+      font-weight: 500;
       color: var(--text-dark);
       margin-bottom: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      text-transform: none;
+      letter-spacing: 0;
     }
 
     .form-group input {
       width: 100%;
-      padding: 14px 16px;
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      font-size: 15px;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
       outline: none;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      background: #F8FAFC;
+      background: #FFFFFF;
       color: var(--text-dark);
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .form-group-password input {
+      padding-right: 48px;
+    }
+
+    .form-group input::placeholder {
+      color: #9CA3AF;
     }
 
     .form-group input:focus {
       border-color: var(--primary);
       background: white;
-      box-shadow: 0 0 0 4px rgba(202, 157, 43, 0.1);
+      box-shadow: none;
     }
 
     .remember-forgot {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 28px;
+      margin-bottom: 32px;
       font-size: 14px;
     }
 
@@ -148,42 +154,45 @@
     }
 
     .remember-me input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
       cursor: pointer;
       accent-color: var(--primary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
     }
 
     .forgot-link {
-      color: var(--primary);
+      color: var(--text-dark);
       text-decoration: none;
       transition: all 0.2s;
-      font-weight: 700;
+      font-weight: 500;
     }
 
     .forgot-link:hover {
-      color: var(--primary-dark);
-      text-decoration: underline;
+      color: var(--primary);
+      text-decoration: none;
     }
 
     .login-button {
       width: 100%;
-      padding: 16px;
-      background: var(--bg-navy);
+      padding: 14px;
+      background: var(--primary);
       color: white;
       border: none;
-      border-radius: 12px;
+      border-radius: 24px;
       font-size: 15px;
-      font-weight: 700;
+      font-weight: 600;
       cursor: pointer;
       transition: all 0.3s;
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+      box-shadow: none;
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
     .login-button:hover {
-      background: #000;
-      transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.3);
+      background: var(--primary-dark);
+      transform: none;
+      box-shadow: none;
     }
 
     .login-button:disabled {
@@ -196,13 +205,13 @@
       text-align: center;
       margin-top: 32px;
       padding-top: 24px;
-      border-top: 1px solid #F1F5F9;
+      border-top: none;
     }
 
     .error-message,
     .success-message {
-      padding: 14px;
-      border-radius: 10px;
+      padding: 12px 16px;
+      border-radius: 8px;
       margin-bottom: 20px;
       display: none;
       font-size: 14px;
@@ -212,16 +221,16 @@
 
     .error-message.show {
       display: block;
-      background: #FFF1F2;
-      color: #BE123C;
-      border-color: #FECDD3;
+      background: #FEE2E2;
+      color: #DC2626;
+      border-color: #FECACA;
     }
 
     .success-message.show {
       display: block;
-      background: #F0FDF4;
-      color: #15803D;
-      border-color: #DCFCE7;
+      background: #ECFDF5;
+      color: #059669;
+      border-color: #D1FAE5;
     }
 
     .loading {
@@ -247,7 +256,6 @@
     }
 
     @keyframes dots {
-
       0%,
       80%,
       100% {
@@ -261,13 +269,52 @@
       }
     }
 
+    .form-group-password {
+      position: relative;
+    }
+
+    .form-group-password input {
+      padding-right: 48px;
+    }
+
+    /* Password visibility toggle */
+    .password-toggle {
+      position: absolute;
+      right: 16px;
+      bottom: 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #9CA3AF;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+    }
+
+    .password-toggle:hover {
+      color: var(--text-gray);
+    }
+
+    .password-toggle svg {
+      width: 20px;
+      height: 20px;
+    }
+
     @media (max-width: 480px) {
       .login-card {
         padding: 32px 24px;
       }
 
       .login-title {
-        font-size: 24px;
+        font-size: 28px;
+      }
+
+      .login-logo-icon {
+        width: 48px;
+        height: 48px;
       }
     }
   </style>
@@ -278,9 +325,23 @@
     <div class="login-card">
       <div class="login-header">
         <div class="login-logo">
-          <img src="../image/Group 1437254357.png" alt="ChatBot Admin" />
+          <div class="login-logo-icon">
+            <!-- ChatBot Logo -->
+            <svg width="38" height="51" viewBox="0 0 38 51" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16.2908 50.1238C16.0219 49.8549 15.9168 49.5832 15.9168 49.1571C15.9168 48.4355 16.1347 48.2176 17.5371 47.5371C19.3028 46.6803 20.1824 45.4854 20.1824 43.9442C20.1824 42.7404 19.6512 41.867 18.5828 41.314C18.0492 41.0378 17.5758 40.9845 14.7742 40.8856C11.2677 40.7619 10.4615 40.5878 8.46369 39.5231C5.8772 38.1445 3.68786 35.4106 2.94458 32.6315C2.7965 32.0776 2.68087 31.9229 2.36826 31.8603C1.7109 31.7286 0.742449 30.9132 0.398 30.2016C0.0962072 29.5782 0.0733568 29.2923 0.0764036 26.1889C0.0792982 23.2866 0.116165 22.7671 0.357172 22.2366C0.691415 21.501 1.52656 20.7353 2.25842 20.4938C2.74318 20.3339 2.8256 20.2198 3.12282 19.297C3.89063 16.9137 5.89807 14.4593 8.07506 13.2418C9.89831 12.2222 10.808 11.9749 13.3317 11.813C14.7768 11.7202 15.3876 11.6149 15.8454 11.3795C16.9151 10.8296 17.7836 9.63323 17.9593 8.4678C18.0566 7.82201 18.0361 7.77631 17.3587 7.12733C15.1548 5.01554 15.5769 1.78951 18.2303 0.467317C19.6931 -0.261648 21.3367 0.0407546 22.6004 1.27169C24.3041 2.93117 24.2241 5.36684 22.408 7.1319L21.7231 7.79749L21.9184 8.63782C22.1734 9.73485 22.6502 10.4851 23.4363 11.026C24.2707 11.6 25.0343 11.7994 26.4285 11.807C28.3255 11.8174 30.3491 12.4324 32.1213 13.5369C34.6558 15.1165 36.1581 17.2254 36.9631 20.3337C37.273 21.5302 37.2992 21.9936 37.3078 26.4275C37.3173 31.2674 37.299 31.4912 36.6872 34.0443C35.5688 38.7109 32.0984 43.3656 27.3581 46.5563C24.4363 48.5231 21.9566 49.5915 18.7352 50.2721C17.2104 50.5944 16.7323 50.5653 16.2908 50.1238ZM19.6282 49.72C24.9337 48.3741 29.7568 45.1676 33.0241 40.8142C34.6891 38.5958 35.7893 36.2597 36.4997 33.4353C36.8494 32.0447 36.8638 31.7759 36.8639 26.5798C36.8641 21.7647 36.8327 21.0546 36.5775 20.1052C35.7571 17.0524 33.8262 14.6709 31.075 13.3186C29.4979 12.5435 28.4283 12.277 26.2734 12.1227C24.9817 12.0302 24.3544 11.9132 23.895 11.6789C23.0182 11.2315 21.9391 9.98377 21.7365 9.1826C21.3527 7.66525 21.3314 7.76565 22.2301 6.86697C22.8815 6.21555 23.1173 5.84536 23.3157 5.16301C24.3341 1.65971 20.3361 -1.09862 17.6154 1.23025C16.8187 1.91214 16.3729 2.76283 16.2652 3.80578C16.1569 4.85512 16.6689 6.00623 17.671 6.96645C18.3746 7.64057 18.3942 7.68353 18.295 8.32338C18.1534 9.23744 17.5167 10.4921 16.955 10.9649C15.9831 11.7826 15.3391 11.9927 13.4031 12.1233C12.3977 12.1911 11.1853 12.3503 10.7091 12.477C7.22925 13.4031 4.28307 16.2751 3.3425 19.6584C3.09388 20.5523 3.06554 20.5863 2.35212 20.8396C1.52382 21.1338 0.84711 21.7695 0.580661 22.5041C0.465489 22.8215 0.396783 24.1524 0.389318 26.2047C0.378349 29.2403 0.395868 29.4452 0.720513 30.0807C1.10503 30.8331 1.56815 31.2238 2.42433 31.5182C2.98358 31.7104 3.02456 31.7733 3.48753 33.1481C4.44303 35.9855 6.21037 38.0143 8.91722 39.3809C10.7146 40.2885 11.5677 40.455 15.02 40.5718L18.1602 40.6781L18.9006 41.1359C19.9554 41.7881 20.5389 42.7803 20.5345 43.9145C20.5327 44.3932 20.4234 45.0379 20.2921 45.347C19.9088 46.2489 18.9078 47.2099 17.7827 47.756C16.4384 48.4085 16.2215 48.6117 16.2215 49.2178C16.2215 50.2653 17.0167 50.3826 19.6282 49.72Z" fill="#EFF7FF" stroke="#EFF7FF" stroke-width="0.152344"/>
+              <path d="M16.564 49.9657C16.1397 49.66 16.0968 48.8245 16.4879 48.4859C16.6344 48.3588 17.217 48.0305 17.7825 47.756C18.9075 47.2098 19.9086 46.2489 20.2919 45.347C20.4232 45.0379 20.5324 44.3932 20.5343 43.9145C20.5387 42.7803 19.9552 41.7881 18.9004 41.1359L18.16 40.6781L15.0197 40.5718C11.5675 40.4549 10.7143 40.2884 8.91698 39.3809C6.21013 38.0142 4.44279 35.9855 3.48729 33.1481C3.02432 31.7733 2.98334 31.7104 2.42409 31.5181C1.56791 31.2238 1.10479 30.8331 0.720272 30.0806C0.395628 29.4452 0.378109 29.2403 0.389078 26.2047C0.396542 24.1523 0.465249 22.8214 0.580421 22.5041C0.84687 21.7695 1.52358 21.1338 2.35187 20.8396C3.0653 20.5863 3.09364 20.5523 3.34226 19.6583C4.28283 16.2751 7.22901 13.4031 10.7088 12.477C11.1851 12.3502 12.3974 12.1911 13.4029 12.1233C15.3389 11.9927 15.9828 11.7826 16.9548 10.9648C17.5165 10.4921 18.1531 9.23741 18.2948 8.32335C18.394 7.6835 18.3743 7.64054 17.6708 6.96642C16.6687 6.0062 16.1567 4.85509 16.265 3.80575C16.5776 0.776238 19.9217 -0.668286 22.1691 1.25536C23.3442 2.26113 23.7534 3.6563 23.3154 5.16298C23.1171 5.84532 22.8813 6.21552 22.2298 6.86694C21.3312 7.76562 21.3525 7.66522 21.7362 9.18257C21.9389 9.98374 23.0179 11.2314 23.8948 11.6789C24.3541 11.9132 24.9815 12.0302 26.2732 12.1226C28.4281 12.277 29.4977 12.5434 31.0748 13.3185C33.8259 14.6709 35.7569 17.0523 36.5773 20.1052C36.8324 21.0546 36.8638 21.7646 36.8637 26.5798C36.8635 31.7759 36.8492 32.0446 36.4994 33.4352C35.532 37.2816 33.7386 40.419 30.8533 43.3121C27.2933 46.8815 22.0839 49.5707 17.6685 50.1182C17.0939 50.1895 16.8225 50.1521 16.564 49.9657ZM27.8755 35.6657C29.564 35.2146 30.8376 34.2483 31.5805 32.8542C31.847 32.3544 32.065 31.8407 32.065 31.7127C32.065 31.5847 32.1506 31.4517 32.2554 31.4168C32.4008 31.3684 32.4573 30.2497 32.494 26.6861C32.5341 22.8058 32.5012 21.8597 32.3001 21.0745C31.7923 19.0925 30.39 17.5651 28.4741 16.9073C27.8081 16.6786 26.8433 16.6488 19.9346 16.6433C11.0929 16.6363 11.1525 16.6294 9.61943 17.8326C8.9188 18.3826 8.65129 18.7377 8.11443 19.8308L7.46148 21.1601L7.41197 25.6599C7.37891 28.6676 7.42142 30.4613 7.5404 31.0689C7.99773 33.4052 9.51675 35.0431 11.8033 35.6656C12.8296 35.9449 26.8296 35.9451 27.8755 35.6657Z" fill="#D59800" stroke="#D59800" stroke-width="0.152344"/>
+              <path d="M12.8732 26.0946C12.5819 25.8965 12.1957 25.515 12.0149 25.2468C10.3814 22.823 13.405 19.8546 15.5706 21.756C16.5355 22.6031 16.7803 23.7957 16.2355 24.9952C15.6502 26.2841 13.9633 26.8356 12.8732 26.0946Z" fill="#D59800" stroke="#D59800" stroke-width="0.152344"/>
+              <path d="M16.7223 32.5266C16.2135 32.2163 15.6117 31.2309 15.6117 30.7078C15.6117 30.5416 15.7771 30.2131 15.9791 29.9781L16.3464 29.5506L19.604 29.5044C21.5461 29.4768 23.0247 29.5203 23.2657 29.6118C24.3172 30.0116 24.3768 31.1884 23.3977 32.2177L22.8191 32.826L20.0152 32.8254C17.5006 32.8249 17.1609 32.794 16.7223 32.5266Z" fill="#D59800" stroke="#D59800" stroke-width="0.152344"/>
+              <path d="M32.2351 26.3951C32.2182 21.5974 32.1963 21.2036 31.9014 20.4152C31.3875 19.042 30.5795 18.1593 29.2213 17.4881L28.0435 16.906H19.8852H11.7269L10.8624 17.3112C10.3869 17.5341 9.67364 18.0139 9.27724 18.3776C8.88084 18.7412 8.58941 18.9359 8.62963 18.8102C8.66984 18.6846 9.09519 18.2644 9.57492 17.8765C11.1217 16.6261 11.0364 16.6363 19.9344 16.6433C26.8431 16.6488 27.8079 16.6787 28.4739 16.9073C29.464 17.2472 30.1954 17.7208 30.8496 18.4458C32.3919 20.1551 32.5266 20.7919 32.5039 26.269C32.494 28.6603 32.4335 30.8226 32.3695 31.0739C32.3055 31.3253 32.245 29.2199 32.2351 26.3951Z" fill="#95C6FF" stroke="#D59800" stroke-width="0.152344"/>
+              <path d="M24.6761 26.2124C22.7158 25.3411 22.7423 22.3363 24.7188 21.3796C25.6534 20.9271 26.5448 21.0805 27.3295 21.829C28.6585 23.0965 28.4622 25.0264 26.897 26.0811C26.3102 26.4766 25.3924 26.5308 24.6761 26.2124Z" fill="#D59800" stroke="#D59800" stroke-width="0.152344"/>
+              <path d="M16.7052 32.874C15.9335 32.4938 15.4595 31.6894 15.4595 30.7603C15.4595 30.1462 15.533 29.9152 15.8121 29.653C16.1542 29.3316 16.2746 29.3218 19.8988 29.3218C23.6051 29.3218 23.6355 29.3244 23.9643 29.6744C24.4309 30.171 24.4236 31.3703 23.9497 32.0796C23.3241 33.016 22.8794 33.1304 19.8775 33.1268C17.7208 33.1242 17.1147 33.0759 16.7052 32.874ZM23.3979 32.2174C24.377 31.1882 24.3174 30.0113 23.2659 29.6116C23.0249 29.52 21.5463 29.4766 19.6042 29.5042L16.3466 29.5504L15.9793 29.9778C15.5308 30.4996 15.5194 30.8285 15.9227 31.619C16.4885 32.7282 16.8154 32.8245 20.0154 32.8251L22.8193 32.8257L23.3979 32.2174Z" fill="#EFF7FF" stroke="#EFF7FF" stroke-width="0.152344"/>
+              <path d="M13.2113 26.6026C12.2663 26.3304 11.1938 24.8734 11.1938 23.862C11.1938 22.7273 11.9103 21.598 12.9361 21.1158C13.7794 20.7194 14.2789 20.711 15.0894 21.0791C16.8869 21.8955 17.3978 24.2578 16.0904 25.7067C15.2652 26.6214 14.3089 26.9189 13.2113 26.6026ZM15.453 25.975C16.3762 25.3176 16.7764 23.8179 16.32 22.7258C16.028 22.0268 15.1377 21.2974 14.4311 21.178C13.2315 20.9754 11.9867 21.8283 11.6484 23.085C11.3445 24.2134 11.8182 25.3775 12.8732 26.0946C13.556 26.5588 14.7082 26.5054 15.453 25.975Z" fill="#EFF7FF" stroke="#EFF7FF" stroke-width="0.152344"/>
+              <path d="M24.6763 26.5301C23.9429 26.1951 23.1242 25.1794 23.0015 24.4524C22.809 23.3133 23.0263 22.5242 23.7348 21.7884C24.9348 20.5422 26.4784 20.5189 27.653 21.7291C28.9578 23.0737 28.7413 25.1704 27.1828 26.2801C26.6108 26.6874 25.3058 26.8177 24.6763 26.5301ZM26.8972 26.081C28.4624 25.0263 28.6587 23.0964 27.3297 21.8289C26.545 21.0804 25.6536 20.927 24.719 21.3795C22.7425 22.3362 22.716 25.341 24.6763 26.2123C25.3926 26.5307 26.3104 26.4765 26.8972 26.081Z" fill="#EFF7FF" stroke="#EFF7FF" stroke-width="0.152344"/>
+            </svg>
+          </div>
         </div>
-        <h1 class="login-title">Admin Login</h1>
+        <h1 class="login-title">Admin login</h1>
+        <p class="login-subtitle">Sign in into your account.</p>
       </div>
 
       <div class="error-message" id="errorMessage"></div>
@@ -288,13 +349,19 @@
 
       <form id="loginForm">
         <div class="form-group">
-          <label for="email">Email Address</label>
-          <input type="email" id="email" name="email" placeholder="admin@example.com" required />
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="example@gmail.com" required />
         </div>
 
-        <div class="form-group">
+        <div class="form-group form-group-password">
           <label for="password">Password</label>
-          <input type="password" id="password" name="password" placeholder="Enter your password" required />
+          <input type="password" id="password" name="password" placeholder="••••••3" required />
+          <button type="button" class="password-toggle" id="passwordToggle">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
         </div>
 
         <div class="remember-forgot">
@@ -302,28 +369,55 @@
             <input type="checkbox" id="rememberMe" name="rememberMe" />
             Remember me
           </label>
-          <a href="#" class="forgot-link" onclick="handleForgotPassword(event)">Forgot password?</a>
+          <a href="#" class="forgot-link" onclick="handleForgotPassword(event)">Forgot Password?</a>
         </div>
 
-        <button type="submit" class="login-button" id="loginBtn">Sign In</button>
+        <button type="submit" class="login-button" id="loginBtn">Login</button>
       </form>
 
       <div class="login-footer">
-
-        <p style="font-size: 12px; color: #adb5bd;">
-
-        </p>
       </div>
     </div>
   </div>
 
   <script>
     // ============================================
+    // PASSWORD TOGGLE FUNCTIONALITY
+    // ============================================
+    const passwordToggle = document.getElementById('passwordToggle');
+    const passwordInput = document.getElementById('password');
+
+    if (passwordToggle) {
+      passwordToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        
+        // Update icon
+        const svg = passwordToggle.querySelector('svg');
+        if (type === 'text') {
+          passwordToggle.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+              <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>
+          `;
+        } else {
+          passwordToggle.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          `;
+        }
+      });
+    }
+
+    // ============================================
     // LOGIN FORM HANDLER
     // ============================================
     const loginForm = document.getElementById('loginForm');
     const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
     const rememberMeCheckbox = document.getElementById('rememberMe');
     const loginBtn = document.getElementById('loginBtn');
     const errorMessage = document.getElementById('errorMessage');

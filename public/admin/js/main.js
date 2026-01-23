@@ -123,8 +123,8 @@ class AdminApp {
                 contentContainer.innerHTML = '<div class="p-8">Dashboard Coming Soon</div>';
                 return;
             case 'escalations':
-                contentContainer.innerHTML = '<div class="p-8">Escalations Coming Soon</div>';
-                return;
+                ComponentClass = Escalations;
+                break;
             default:
                 console.warn(`Section ${sectionName} not found`);
                 return;
