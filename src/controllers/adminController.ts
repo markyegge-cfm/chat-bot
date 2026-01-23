@@ -135,6 +135,32 @@ export class AdminController {
   }
 
   /**
+   * Get conversation messages
+   * Query from Firestore
+   */
+  static async getConversationMessages(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = (req as any).params;
+
+      // TODO: Phase 3 - Query messages from Firestore for this conversation
+      // For now, return empty array
+      const messages: Array<{id: string; sender: string; content: string; timestamp: Date}> = [];
+
+      (res as any).json({
+        conversationId: id,
+        messages,
+        total: messages.length,
+      });
+    } catch (error) {
+      console.error('Get conversation messages error:', error);
+      (res as any).status(500).json({
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
    * Get escalations list
    * Query from Firestore
    */

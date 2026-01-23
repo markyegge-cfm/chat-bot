@@ -152,10 +152,17 @@ class APIService {
   }
 
   /**
-   * Admin: Get specific conversation
+   * Admin: Get specific conversation details
    */
   adminGetConversation(conversationId) {
     return this.get(`/api/admin/conversations/${conversationId}`);
+  }
+
+  /**
+   * Admin: Get conversation messages/history
+   */
+  adminGetConversationMessages(conversationId) {
+    return this.get(`/api/admin/conversations/${conversationId}/messages`);
   }
 
   /**

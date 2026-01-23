@@ -19,109 +19,25 @@ class Conversations {
                <!-- Mobile header (Back button + Title) -->
                <div class="conversation-mobile-header" style="display:none; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #E2E8F0;">
                   <button class="back-to-list-btn" aria-label="Back to list" style="background:transparent;border:none;font-size:18px;cursor:pointer;padding:6px;">&larr;</button>
-                  <h3 class="conversation-title" style="margin:0;font-size:16px;font-weight:600;">#73c72</h3>
+                  <h3 class="conversation-title" style="margin:0;font-size:16px;font-weight:600;">Select a conversation</h3>
                   <div style="width:32px;"></div>
                </div>
-               <!-- Messages Feed -->
-               <div class="flex-1 overflow-y-auto p-8 space-y-8">
-            
-            <!-- User Message -->
-            <div class="flex justify-end mb-8">
-               <div class="bg-gray-100 rounded-2xl rounded-tr-sm px-6 py-4 max-w-[80%]">
-                  <p class="text-[15px] text-gray-800 leading-relaxed font-medium">Do AI agents actually understand what users mean, or do they just predict text?</p>
-               </div>
-            </div>
-
-            <!-- AI Message -->
-            <div class="flex gap-4 max-w-[90%]">
-               <div class="w-10 h-10 rounded-full bg-[#E5A000] flex items-center justify-center flex-shrink-0 text-white shadow-sm overflow-hidden">
-                  <img src="../image/vectorized (7) 2.png" alt="AI Agent" class="w-full h-full object-cover">
-               </div>
-               <div class="flex-1">
-                  <div class="flex items-center gap-3 mb-2">
-                     <span class="text-[14px] font-bold text-gray-900">AI Agent</span>
-                     <span class="text-[12px] text-gray-400 font-medium">02:22 AM</span>
-                  </div>
-                  <div class="border border-gray-100 rounded-2xl rounded-tl-sm p-6 shadow-sm">
-                     <p class="text-[15px] text-gray-700 leading-relaxed mb-4">That's a fair question — and an important one.</p>
-                     <p class="text-[15px] text-gray-700 leading-relaxed">Most AI agents don't "understand" in the human sense, but they're trained to recognize patterns in language, intent, and context. That allows them to respond in ways that feel meaningful, even if the process underneath is statistical</p>
+               
+               <!-- Messages Feed (Empty State Initially) -->
+               <div class="flex-1 overflow-y-auto p-8 space-y-8" id="conversation-messages">
+                  <div class="flex items-center justify-center h-full text-center">
+                     <div>
+                        <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                        </svg>
+                        <p class="text-gray-400 text-[14px]">Select a conversation to view messages</p>
+                     </div>
                   </div>
                </div>
-            </div>
-
-            <!-- User Message -->
-            <div class="flex gap-4 max-w-[90%]">
-               <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 text-[12px] font-bold text-gray-600">
-                  AT
-               </div>
-               <div class="flex-1">
-                  <div class="flex items-center gap-3 mb-2">
-                     <span class="text-[14px] font-bold text-gray-900">#73c72</span>
-                     <span class="text-[12px] text-gray-400 font-medium">02:22 AM</span>
-                  </div>
-                  <div class="bg-gray-100 rounded-2xl rounded-tl-sm px-6 py-4 inline-block">
-                     <p class="text-[15px] text-gray-800 leading-relaxed font-medium">So it's more imitation than understanding?</p>
-                  </div>
-               </div>
-            </div>
-
-             <!-- AI Message -->
-            <div class="flex gap-4 max-w-[90%]">
-               <div class="w-10 h-10 rounded-full bg-[#E5A000] flex items-center justify-center flex-shrink-0 text-white shadow-sm overflow-hidden">
-                  <img src="../image/vectorized (7) 2.png" alt="AI Agent" class="w-full h-full object-cover">
-               </div>
-               <div class="flex-1">
-                  <div class="flex items-center gap-3 mb-2">
-                     <span class="text-[14px] font-bold text-gray-900">AI Agent</span>
-                     <span class="text-[12px] text-gray-400 font-medium">02:22 AM</span>
-                  </div>
-                  <div class="border border-gray-100 rounded-2xl rounded-tl-sm p-6 shadow-sm">
-                     <p class="text-[15px] text-gray-700 leading-relaxed mb-4">In a way, yes — but imitation at scale can still be useful.</p>
-                     <p class="text-[15px] text-gray-700 leading-relaxed mb-4">When an agent is well-designed, it doesn't just answer questions. It tracks context, adapts tone, and knows when to ask for clarification versus when to act.</p>
-                     <p class="text-[15px] text-gray-700 leading-relaxed">That's what makes it feel less like a script and more like a conversation.</p>
-                  </div>
-               </div>
-            </div>
-
-             <!-- User Message -->
-            <div class="flex gap-4 max-w-[90%]">
-               <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 text-[12px] font-bold text-gray-600">
-                  AT
-               </div>
-               <div class="flex-1">
-                  <div class="flex items-center gap-3 mb-2">
-                     <span class="text-[14px] font-bold text-gray-900">#73c72</span>
-                     <span class="text-[12px] text-gray-400 font-medium">02:22 AM</span>
-                  </div>
-                  <div class="bg-gray-100 rounded-2xl rounded-tl-sm px-6 py-4 inline-block">
-                     <p class="text-[15px] text-gray-800 leading-relaxed font-medium">Interesting. So the goal isn't intelligence, it's reliability.</p>
-                  </div>
-               </div>
-            </div>
-
-             <!-- AI Message -->
-            <div class="flex gap-4 max-w-[90%]">
-               <div class="w-10 h-10 rounded-full bg-[#E5A000] flex items-center justify-center flex-shrink-0 text-white shadow-sm overflow-hidden">
-                  <img src="../image/vectorized (7) 2.png" alt="AI Agent" class="w-full h-full object-cover">
-               </div>
-               <div class="flex-1">
-                  <div class="flex items-center gap-3 mb-2">
-                     <span class="text-[14px] font-bold text-gray-900">AI Agent</span>
-                     <span class="text-[12px] text-gray-400 font-medium">02:22 AM</span>
-                  </div>
-                  <div class="border border-gray-100 rounded-2xl rounded-tl-sm p-6 shadow-sm">
-                     <p class="text-[15px] text-gray-700 leading-relaxed mb-4">That's the quiet secret.</p>
-                     <p class="text-[15px] text-gray-700 leading-relaxed mb-4">An AI agent that's calm, consistent, and honest about its limits will outperform a "smart" one that surprises users.</p>
-                     <p class="text-[15px] text-gray-700 leading-relaxed">Would you like me to show how this applies to your workflow or dashboard?</p>
-                  </div>
-               </div>
-            </div>
-
-          </div>
 
                <!-- Bottom Action -->
                <div class="join-conversation-bar p-8 border-t border-gray-100">
-                   <button class="w-full bg-[#E5A000] hover:bg-[#D49000] text-white font-bold py-4 rounded-xl shadow-sm transition-all text-[15px]">
+                   <button class="w-full bg-[#E5A000] hover:bg-[#D49000] text-white font-bold py-4 rounded-xl shadow-sm transition-all text-[15px]" id="join-conversation-btn" style="display: none;">
                       Join Conversation
                    </button>
                </div>
@@ -202,17 +118,23 @@ class Conversations {
       const isMobile = () => window.innerWidth <= 768;
 
       conversationItems.forEach(item => {
-         item.addEventListener('click', () => {
+         item.addEventListener('click', async () => {
             conversationItems.forEach(i => i.classList.remove('active'));
             item.classList.add('active');
 
-            // Update mobile header title if present
-            const titleEl = document.querySelector('.conversation-title');
+            // Get conversation ID
+            const conversationId = item.dataset.conversationId;
             const h3 = item.querySelector('h3');
-            if (titleEl && h3) titleEl.textContent = h3.textContent;
+            const titleText = h3 ? h3.textContent : 'Conversation';
+
+            // Update mobile header title
+            const titleEl = document.querySelector('.conversation-title');
+            if (titleEl) titleEl.textContent = titleText;
+
+            // Load conversation messages
+            await this.loadConversationMessages(conversationId);
 
             if (isMobile()) {
-               // Use classes so CSS !important rules don't block us
                conversationList.classList.add('hidden');
                conversationChat.classList.add('show');
                if (mobileHeader) mobileHeader.style.display = 'flex';
@@ -238,5 +160,106 @@ class Conversations {
             if (mobileHeader) mobileHeader.style.display = 'none';
          }
       });
+   }
+
+   static async loadConversationMessages(conversationId) {
+      const messagesContainer = document.getElementById('conversation-messages');
+      
+      try {
+         // Show loading state
+         messagesContainer.innerHTML = `
+            <div class="flex items-center justify-center h-full">
+               <div class="text-center">
+                  <div class="animate-spin inline-block w-8 h-8 border-4 border-gray-300 border-t-[#E5A000] rounded-full mb-2"></div>
+                  <p class="text-gray-400 text-[14px]">Loading messages...</p>
+               </div>
+            </div>
+         `;
+
+         // Fetch conversation messages from API
+         // TODO: Implement when backend has the endpoint
+         const messages = await this.fetchConversationMessages(conversationId);
+         
+         if (!messages || messages.length === 0) {
+            messagesContainer.innerHTML = `
+               <div class="flex items-center justify-center h-full">
+                  <p class="text-gray-400 text-[14px]">No messages in this conversation</p>
+               </div>
+            `;
+            return;
+         }
+
+         // Render messages
+         this.renderMessages(messages);
+      } catch (error) {
+         console.error('Failed to load messages:', error);
+         messagesContainer.innerHTML = `
+            <div class="flex items-center justify-center h-full text-center">
+               <div>
+                  <p class="text-red-500 text-[14px]">Failed to load messages</p>
+               </div>
+            </div>
+         `;
+      }
+   }
+
+   static async fetchConversationMessages(conversationId) {
+      try {
+         // When backend API is ready, use:
+         const response = await window.apiService.adminGetConversationMessages(conversationId);
+         return response.messages || [];
+      } catch (error) {
+         console.error('API Error:', error);
+         return [];
+      }
+   }
+
+   static renderMessages(messages) {
+      const messagesContainer = document.getElementById('conversation-messages');
+      
+      const html = messages.map(msg => {
+         const timestamp = new Date(msg.timestamp).toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+         });
+         
+         if (msg.sender === 'user') {
+            return `
+               <div class="flex justify-end mb-8">
+                  <div class="bg-gray-100 rounded-2xl rounded-tr-sm px-6 py-4 max-w-[80%]">
+                     <p class="text-[15px] text-gray-800 leading-relaxed font-medium">${this.escapeHtml(msg.content)}</p>
+                     <p class="text-[11px] text-gray-500 mt-1">${timestamp}</p>
+                  </div>
+               </div>
+            `;
+         } else {
+            return `
+               <div class="flex gap-4 max-w-[90%] mb-8">
+                  <div class="w-10 h-10 rounded-full bg-[#E5A000] flex items-center justify-center flex-shrink-0 text-white shadow-sm overflow-hidden">
+                     <img src="../image/vectorized (7) 2.png" alt="AI Agent" class="w-full h-full object-cover">
+                  </div>
+                  <div class="flex-1">
+                     <div class="flex items-center gap-3 mb-2">
+                        <span class="text-[14px] font-bold text-gray-900">AI Agent</span>
+                        <span class="text-[12px] text-gray-400 font-medium">${timestamp}</span>
+                     </div>
+                     <div class="border border-gray-100 rounded-2xl rounded-tl-sm p-6 shadow-sm">
+                        <p class="text-[15px] text-gray-700 leading-relaxed">${this.escapeHtml(msg.content)}</p>
+                     </div>
+                  </div>
+               </div>
+            `;
+         }
+      }).join('');
+
+      messagesContainer.innerHTML = html;
+      // Auto-scroll to bottom
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+   }
+
+   static escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
    }
 }

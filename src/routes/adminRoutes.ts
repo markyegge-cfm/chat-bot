@@ -26,6 +26,12 @@ router.get('/api/admin/dashboard', AdminController.getDashboardStats);
 router.get('/api/admin/conversations', AdminController.getConversations);
 
 /**
+ * GET /api/admin/conversations/:id/messages
+ * Get messages for a specific conversation
+ */
+router.get('/api/admin/conversations/:id/messages', AdminController.getConversationMessages);
+
+/**
  * GET /api/admin/escalations
  * Get list of escalations
  */
