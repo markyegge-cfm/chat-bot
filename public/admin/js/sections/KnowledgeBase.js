@@ -191,8 +191,15 @@ class KnowledgeBase {
 
    static async loadDocuments() {
       try {
+         console.log('Loading knowledge items...');
          const response = await fetch('/api/knowledge');
+         
+         if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+         }
+         
          const result = await response.json();
+         console.log('Loaded knowledge items:', result);
          
          if (result.success) {
             this.allDocuments = result.data || [];
@@ -310,21 +317,31 @@ class KnowledgeBase {
       if (!confirm('Are you sure you want to delete this knowledge item?')) return;
 
       try {
+         console.log('Deleting knowledge item:', itemId);
+         
          const response = await fetch(`/api/knowledge/${itemId}`, {
             method: 'DELETE',
+            headers: {
+               'Content-Type': 'application/json',
+            },
          });
 
+         if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+         }
+
          const result = await response.json();
+         console.log('Delete response:', result);
 
          if (result.success) {
-            await this.loadDocuments();
             this.showToast('Knowledge item deleted successfully', 'success');
+            await this.loadDocuments();
          } else {
             throw new Error(result.error || 'Failed to delete item');
          }
       } catch (error) {
          console.error('Delete error:', error);
-         this.showToast('Failed to delete knowledge item', 'error');
+         this.showToast(error.message || 'Failed to delete knowledge item', 'error');
       }
    }
 
@@ -826,12 +843,14 @@ class KnowledgeBase {
             btnCsvUpload.disabled = true;
             btnCsvUpload.textContent = 'Processing...';
             csvUploadProgress.classList.remove('hidden');
+            console.log('Starting CSV upload:', selectedCsvFile.name);
             
             // Parse CSV
             csvProgressBar.style.width = '30%';
             csvProgressPercent.textContent = '30%';
             
             const items = await parseCsvFile(selectedCsvFile);
+            console.log('Parsed CSV items:', items);
             
             csvProgressBar.style.width = '60%';
             csvProgressPercent.textContent = '60%';
@@ -843,20 +862,28 @@ class KnowledgeBase {
                body: JSON.stringify({ items })
             });
 
-            if (!response.ok) throw new Error('Upload failed');
+            if (!response.ok) {
+               const error = await response.json();
+               throw new Error(error.error || `HTTP ${response.status}`);
+            }
 
             const result = await response.json();
+            console.log('CSV upload response:', result);
             
             csvProgressBar.style.width = '100%';
             csvProgressPercent.textContent = '100%';
 
             setTimeout(() => {
                closeModal();
-               this.showToast(`Successfully imported ${result.data.successful} items`, 'success');
+               const message = result.data?.successful 
+                  ? `Successfully imported ${result.data.successful} items`
+                  : 'CSV uploaded successfully';
+               this.showToast(message, 'success');
                this.loadDocuments();
             }, 500);
 
          } catch (error) {
+            console.error('CSV upload error:', error);
             this.showToast(error.message || 'CSV upload failed', 'error');
             btnCsvUpload.disabled = false;
             btnCsvUpload.textContent = 'Upload CSV';
@@ -877,20 +904,37 @@ class KnowledgeBase {
          try {
             btnManualSubmit.disabled = true;
             btnManualSubmit.textContent = 'Saving...';
+            console.log('Saving manual entry:', { question, answer });
 
             const response = await fetch('/api/knowledge', {
                method: 'POST',
-               headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify({ question, answer, type: 'manual' })
+               headers: { 
+                  'Content-Type': 'application/json',
+               },
+               body: JSON.stringify({ 
+                  question, 
+                  answer, 
+                  type: 'manual' 
+               })
             });
 
-            if (!response.ok) throw new Error('Failed to save');
+            if (!response.ok) {
+               throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
-            closeModal();
-            this.showToast('Knowledge added successfully', 'success');
-            this.loadDocuments();
+            const result = await response.json();
+            console.log('Save response:', result);
+
+            if (result.success) {
+               closeModal();
+               this.showToast('Knowledge added successfully', 'success');
+               await this.loadDocuments();
+            } else {
+               throw new Error(result.error || 'Failed to save');
+            }
 
          } catch (error) {
+            console.error('Save error:', error);
             this.showToast(error.message || 'Failed to add knowledge', 'error');
          } finally {
             btnManualSubmit.disabled = false;
@@ -910,20 +954,36 @@ class KnowledgeBase {
          try {
             btnEditSubmit.disabled = true;
             btnEditSubmit.textContent = 'Saving...';
+            console.log('Updating knowledge item:', { id: editingItemId, question, answer });
 
             const response = await fetch(`/api/knowledge/${editingItemId}`, {
                method: 'PUT',
-               headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify({ question, answer })
+               headers: { 
+                  'Content-Type': 'application/json',
+               },
+               body: JSON.stringify({ 
+                  question, 
+                  answer 
+               })
             });
 
-            if (!response.ok) throw new Error('Failed to update');
+            if (!response.ok) {
+               throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
-            closeModal();
-            this.showToast('Knowledge updated successfully', 'success');
-            this.loadDocuments();
+            const result = await response.json();
+            console.log('Update response:', result);
+
+            if (result.success) {
+               closeModal();
+               this.showToast('Knowledge updated successfully', 'success');
+               await this.loadDocuments();
+            } else {
+               throw new Error(result.error || 'Failed to update');
+            }
 
          } catch (error) {
+            console.error('Update error:', error);
             this.showToast(error.message || 'Failed to update knowledge', 'error');
          } finally {
             btnEditSubmit.disabled = false;
