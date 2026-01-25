@@ -1,8 +1,14 @@
+// Load environment variables FIRST (before any other imports)
+import dotenv from 'dotenv';
+dotenv.config();
+
+// Then import everything else
 import cors from 'cors';
 import express, { type Request, type Response } from 'express';
 import path from 'path';
-import adminRoutes from './routes/adminRoutes';
 import chatRoutes from './routes/chatRoutes';
+import knowledgeRoutes from './routes/knowledgeRoutes';
+import vertexAIRag from './services/vertexAIRagService';
 
 const app: any = express();
 const PORT: number = parseInt(process.env.PORT || '3000');
@@ -51,7 +57,7 @@ app.get('/admin', (req: Request, res: Response) => {
 // ROUTE MOUNTING
 // ============================================
 app.use(chatRoutes);
-app.use(adminRoutes);
+app.use(knowledgeRoutes);
 
 // ============================================
 // 404 HANDLER
@@ -66,9 +72,23 @@ app.use((req: any, res: any) => {
 // ============================================
 // START SERVER
 // ============================================
-app.listen(PORT, () => {
-  console.log(`\n🚀 Server running at http://localhost:${PORT}`);
-  console.log(`📊 Dashboard: http://localhost:${PORT}/admin`);
-  console.log(`🧪 Test widget: http://localhost:${PORT}`);
-  console.log(`\nPhase 1 Complete - Ready for Phase 2 RAG Integration\n`);
-});
+const startServer = async () => {
+  try {
+    // Initialize Vertex AI RAG Service (optional - falls back to local mode)
+    console.log('\n🔧 Initializing Vertex AI RAG Service...');
+    await vertexAIRag.initialize();
+    
+    // Start Express server
+    app.listen(PORT, () => {
+      console.log(`\n🚀 Server running at http://localhost:${PORT}`);
+      console.log(`📊 Dashboard: http://localhost:${PORT}/admin`);
+      console.log(`🧪 Test widget: http://localhost:${PORT}`);
+      console.log(`✅ Server ready - Knowledge Base operational\n`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();

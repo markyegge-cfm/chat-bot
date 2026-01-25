@@ -4,10 +4,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const cors_1 = __importDefault(require("cors"));
+const dotenv_1 = __importDefault(require("dotenv"));
 const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
-const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const chatRoutes_1 = __importDefault(require("./routes/chatRoutes"));
+const knowledgeRoutes_1 = __importDefault(require("./routes/knowledgeRoutes"));
+const vertexAIRagService_1 = __importDefault(require("./services/vertexAIRagService"));
+// Load environment variables
+dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = parseInt(process.env.PORT || '3000');
 // ============================================
@@ -49,7 +53,7 @@ app.get('/admin', (req, res) => {
 // ROUTE MOUNTING
 // ============================================
 app.use(chatRoutes_1.default);
-app.use(adminRoutes_1.default);
+app.use(knowledgeRoutes_1.default);
 // ============================================
 // 404 HANDLER
 // ============================================
@@ -62,9 +66,22 @@ app.use((req, res) => {
 // ============================================
 // START SERVER
 // ============================================
-app.listen(PORT, () => {
-    console.log(`\n🚀 Server running at http://localhost:${PORT}`);
-    console.log(`📊 Dashboard: http://localhost:${PORT}/admin`);
-    console.log(`🧪 Test widget: http://localhost:${PORT}`);
-    console.log(`\nPhase 1 Complete - Ready for Phase 2 RAG Integration\n`);
-});
+const startServer = async () => {
+    try {
+        // Initialize Vertex AI RAG Service (optional - falls back to local mode)
+        console.log('\n🔧 Initializing Vertex AI RAG Service...');
+        await vertexAIRagService_1.default.initialize();
+        // Start Express server
+        app.listen(PORT, () => {
+            console.log(`\n🚀 Server running at http://localhost:${PORT}`);
+            console.log(`📊 Dashboard: http://localhost:${PORT}/admin`);
+            console.log(`🧪 Test widget: http://localhost:${PORT}`);
+            console.log(`✅ Server ready - Knowledge Base operational\n`);
+        });
+    }
+    catch (error) {
+        console.error('❌ Failed to start server:', error);
+        process.exit(1);
+    }
+};
+startServer();
