@@ -4,3 +4,4 @@
 /.env
 /service-account-key.json
 /service-account-*.json
+/dist

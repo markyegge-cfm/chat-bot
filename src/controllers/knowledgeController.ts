@@ -329,63 +329,54 @@ export const uploadCSV = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const csvData = req.body.csvData as string;
+    // Frontend sends parsed items array
+    const items = req.body.items as { question: string; answer: string }[];
 
-    if (!csvData) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
       (res as any).status(400).json({
         success: false,
-        error: 'CSV data is required',
+        error: 'Items array is required and must not be empty',
       });
       return;
     }
 
-    // Parse CSV
-    const lines = csvData.trim().split('\n');
-    if (lines.length < 2) {
+    // Validate each item has question and answer
+    const validItems = items.filter(
+      (item) => item.question && item.answer && 
+                typeof item.question === 'string' && 
+                typeof item.answer === 'string'
+    );
+
+    if (validItems.length === 0) {
       (res as any).status(400).json({
         success: false,
-        error: 'CSV must have header and at least one data row',
+        error: 'No valid Q&A pairs found',
       });
       return;
     }
 
-    // Skip header, process data rows
-    const dataLines = lines.slice(1);
-    const items: { question: string; answer: string }[] = [];
-
-    for (const line of dataLines) {
-      const parts = line.split(',').map((p) => p.trim().replace(/^"|"$/g, ''));
-      if (parts.length >= 2) {
-        items.push({
-          question: parts[0],
-          answer: parts.slice(1).join(','), // Handle commas in answer
-        });
-      }
-    }
-
-    if (items.length === 0) {
-      (res as any).status(400).json({
-        success: false,
-        error: 'No valid Q&A pairs found in CSV',
-      });
-      return;
-    }
-
-    // Upload as single CSV file to RAG
+    // Create CSV content from items
     ensureTempDir();
     const fileId = `csv_${Date.now()}`;
     const tempFile = path.join(RAG_TEMP_DIR, `${fileId}.csv`);
+    
+    // Build CSV with proper quoting
     const header = 'question,answer\n';
-    const rows = items
-      .map((item) => `"${item.question.replace(/"/g, '""')}","${item.answer.replace(/"/g, '""')}"`)
+    const rows = validItems
+      .map((item) => {
+        const q = item.question.replace(/"/g, '""'); // Escape quotes
+        const a = item.answer.replace(/"/g, '""');
+        return `"${q}","${a}"`;
+      })
       .join('\n');
+    
     fs.writeFileSync(tempFile, header + rows);
 
     // Upload CSV to RAG
     const ragFile = await vertexAIRag.uploadFile(
       tempFile,
-      `CSV Upload - ${items.length} Q&A pairs`,
-      `Batch CSV upload with ${items.length} items`,
+      `CSV Upload - ${validItems.length} Q&A pairs`,
+      `Batch CSV upload with ${validItems.length} items`,
     );
 
     // Clean up temp file
@@ -397,12 +388,12 @@ export const uploadCSV = async (req: Request, res: Response): Promise<void> => {
 
     (res as any).status(201).json({
       success: true,
-      message: `Uploaded ${items.length} Q&A pairs to RAG`,
+      message: `Uploaded ${validItems.length} Q&A pairs to RAG`,
       data: {
         uploadedFile: ragFile,
-        itemCount: items.length,
-        successCount: items.length,
-        failedCount: 0,
+        successful: validItems.length,
+        failed: items.length - validItems.length,
+        total: items.length,
       },
     });
   } catch (error: any) {
