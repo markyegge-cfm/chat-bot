@@ -186,7 +186,7 @@ export const createKnowledge = async (req: Request, res: Response): Promise<void
  */
 export const updateKnowledge = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { question, answer } = req.body;
 
     if (!id || !question || !answer) {
@@ -194,8 +194,24 @@ export const updateKnowledge = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    await vertexAIRag.deleteFile(String(id));
+    // Get the knowledge metadata to find the RAG file ID
+    let knowledge = null;
+    try {
+      knowledge = await firebaseService.getKnowledgeById(id);
+    } catch (e) {
+      console.warn('⚠️  Could not fetch from Firebase, proceeding with update');
+    }
 
+    // Delete old file from RAG if we have the ragFileId
+    if (knowledge?.ragFileId) {
+      try {
+        await vertexAIRag.deleteFile(knowledge.ragFileId);
+      } catch (error: any) {
+        console.warn('⚠️  Could not delete old file from Vertex AI RAG:', error.message);
+      }
+    }
+
+    // Upload new file to RAG
     ensureTempDir();
     const tempFile = path.join(RAG_TEMP_DIR, `upd_${Date.now()}.txt`);
     fs.writeFileSync(tempFile, `Q: ${question.trim()}\n\nA: ${answer.trim()}`);
@@ -203,12 +219,28 @@ export const updateKnowledge = async (req: Request, res: Response): Promise<void
     const ragFile = await vertexAIRag.uploadFile(tempFile, question, answer);
     try { fs.unlinkSync(tempFile); } catch (e) {}
 
+    // Update Firebase metadata
+    try {
+      await firebaseService.updateKnowledge(id, {
+        ragFileId: ragFile.name,
+        question: question.trim(),
+        answer: answer.trim(),
+        updatedAt: new Date().toISOString(),
+        status: 'COMPLETED',
+        type: 'manual',
+        createdAt: knowledge?.createdAt || new Date().toISOString(),
+      });
+    } catch (e) {
+      console.warn('⚠️  Could not update Firestore metadata');
+    }
+
     (res as any).json({
       success: true,
       message: 'Knowledge item updated',
-      data: mapFileToUI(ragFile), // Fixed mapping
+      data: mapFileToUI(ragFile),
     });
   } catch (error: any) {
+    console.error('❌ Update knowledge error:', error.message);
     (res as any).status(500).json({ success: false, error: error.message });
   }
 };

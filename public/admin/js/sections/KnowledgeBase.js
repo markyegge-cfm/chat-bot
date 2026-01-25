@@ -781,6 +781,37 @@ class KnowledgeBase {
          btnCsvUpload.disabled = false;
       };
 
+      const parseCSVLine = (line) => {
+         const result = [];
+         let current = '';
+         let insideQuotes = false;
+         
+         for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            const nextChar = line[i + 1];
+            
+            if (char === '"') {
+               if (insideQuotes && nextChar === '"') {
+                  // Escaped quote
+                  current += '"';
+                  i++;
+               } else {
+                  // Toggle quote state
+                  insideQuotes = !insideQuotes;
+               }
+            } else if (char === ',' && !insideQuotes) {
+               // End of field
+               result.push(current.trim());
+               current = '';
+            } else {
+               current += char;
+            }
+         }
+         
+         result.push(current.trim());
+         return result;
+      };
+
       const parseCsvFile = (file) => {
          return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -794,7 +825,7 @@ class KnowledgeBase {
                      return;
                   }
 
-                  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase());
                   if (!headers.includes('question') || !headers.includes('answer')) {
                      reject(new Error('CSV must have "question" and "answer" columns'));
                      return;
@@ -805,10 +836,19 @@ class KnowledgeBase {
 
                   const items = [];
                   for (let i = 1; i < lines.length; i++) {
-                     const values = lines[i].split(',');
+                     const values = parseCSVLine(lines[i]);
                      if (values.length >= Math.max(questionIdx, answerIdx) + 1) {
-                        const question = values[questionIdx]?.trim();
-                        const answer = values[answerIdx]?.trim();
+                        let question = values[questionIdx]?.trim();
+                        let answer = values[answerIdx]?.trim();
+                        
+                        // Remove surrounding quotes if present
+                        if (question && question.startsWith('"') && question.endsWith('"')) {
+                           question = question.slice(1, -1);
+                        }
+                        if (answer && answer.startsWith('"') && answer.endsWith('"')) {
+                           answer = answer.slice(1, -1);
+                        }
+                        
                         if (question && answer) {
                            items.push({ question, answer });
                         }
