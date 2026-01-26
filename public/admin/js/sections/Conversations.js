@@ -201,7 +201,7 @@ class Conversations {
             </div>
          `;
 
-         // Fetch conversation messages from API
+         // Fetch conversation messages from APi
          const messages = await window.apiService.getConversationMessages(conversationId);
          
          if (!messages || messages.length === 0) {
