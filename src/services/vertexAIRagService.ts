@@ -162,12 +162,16 @@ class VertexAIRagService {
       },
     });
 
-    const fileId = res.data.name?.split('/').pop() || uuidv4();
+    console.log('[RAG Upload] Response:', JSON.stringify(res.data).substring(0, 200));
+    
+    const fileId = res.data.name?.split('/').pop() || res.data.id || uuidv4();
+    const resourceName = res.data.name || `projects/${this.config.projectId}/locations/${this.config.location}/ragCorpora/${this.config.corpusId}/ragFiles/${fileId}`;
+    
     this.qaCache.set(fileId, { question: displayName || 'Untitled', answer: description || '' });
 
     return {
       id: fileId,
-      name: res.data.name,
+      name: resourceName,
       displayName: displayName || 'Untitled',
       description: description || '',
       type: this.getFileType(filePath),

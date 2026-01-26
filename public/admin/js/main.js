@@ -5,6 +5,12 @@
 
 class AdminApp {
     constructor() {
+        // API Service should already be initialized globally
+        if (!window.apiService) {
+            console.warn('⚠️ API Service not initialized, creating now...');
+            window.apiService = new APIService();
+        }
+        
         // Run auth check before anything else
         if (this.checkAuth()) {
             this.init();

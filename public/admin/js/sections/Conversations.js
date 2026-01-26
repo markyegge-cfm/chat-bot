@@ -53,12 +53,26 @@ class Conversations {
 
    static async loadConversations() {
       try {
+         console.log('📊 Fetching conversations from API...');
          const data = await window.apiService.adminGetConversations(1, 50);
-         if (data && data.conversations) {
+         console.log('📊 API Response:', data);
+         
+         if (data && data.success && data.conversations) {
+            console.log('✅ Conversations loaded:', data.conversations.length);
             this.renderConversationList(data.conversations);
+         } else if (data && data.conversations && Array.isArray(data.conversations)) {
+            // Handle case where success flag might not be present
+            console.log('✅ Conversations loaded (no success flag):', data.conversations.length);
+            this.renderConversationList(data.conversations);
+         } else {
+            console.warn('⚠️ Unexpected response format:', data);
+            const list = document.getElementById('conversations-list');
+            if (list) {
+               list.innerHTML = '<div class="p-4 text-center text-gray-400 text-sm">No conversations found</div>';
+            }
          }
       } catch (error) {
-         console.error('Failed to load conversations:', error);
+         console.error('❌ Failed to load conversations:', error);
          // Show error state
          const list = document.getElementById('conversations-list');
          if (list) {
@@ -77,7 +91,18 @@ class Conversations {
       }
 
       const html = conversations.map((conv, idx) => {
-         const startTime = new Date(conv.startedAt);
+         // Handle Firestore timestamp objects
+         let startTime;
+         if (conv.startedAt && typeof conv.startedAt === 'object' && conv.startedAt._seconds) {
+            // Firestore Timestamp object
+            startTime = new Date(conv.startedAt._seconds * 1000);
+         } else if (conv.startedAt && typeof conv.startedAt === 'string') {
+            // ISO string
+            startTime = new Date(conv.startedAt);
+         } else {
+            startTime = new Date();
+         }
+         
          const timeStr = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
          const initials = conv.userId ? conv.userId.substring(0, 2).toUpperCase() : '#' + (idx + 1);
          const isActive = idx === 0 ? 'active' : '';
@@ -97,7 +122,7 @@ class Conversations {
                    <h3 class="text-[14px] font-bold text-gray-900 font-mono">${conv.id.substring(0, 8)}</h3>
                    <span class="text-[12px] text-gray-500 font-medium">${timeStr}</span>
                  </div>
-                 <p class="text-[13px] text-gray-500 truncate leading-relaxed">${conv.lastMessage}</p>
+                 <p class="text-[13px] text-gray-500 truncate leading-relaxed">${conv.lastMessage || (conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1].content : 'No messages')}</p>
                </div>
             </div>
          `;
@@ -177,8 +202,7 @@ class Conversations {
          `;
 
          // Fetch conversation messages from API
-         // TODO: Implement when backend has the endpoint
-         const messages = await this.fetchConversationMessages(conversationId);
+         const messages = await window.apiService.getConversationMessages(conversationId);
          
          if (!messages || messages.length === 0) {
             messagesContainer.innerHTML = `

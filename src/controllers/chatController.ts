@@ -1,5 +1,6 @@
 import { MemorySaver, StateGraph } from '@langchain/langgraph';
 import type { Request, Response } from 'express';
+import conversationService from '../services/conversationService';
 import firebaseService from '../services/firebaseService';
 import { vertexAIRag } from '../services/vertexAIRagService';
 
@@ -263,6 +264,29 @@ export class ChatController {
 
       res.write('data: [DONE]\n\n');
       res.end();
+
+      // Save user message and bot response to conversation session (async, non-blocking)
+      // This is optional - if it fails, chat still works
+      try {
+        // Create conversation session if it doesn't exist
+        const existingSession = await conversationService.getSession(sessionId);
+        if (!existingSession) {
+          await conversationService.createSession('anonymous', sessionId);
+          console.log(`[Conversation] New session created: ${sessionId}`);
+        }
+
+        await conversationService.addMessage(sessionId, 'user', message);
+        await conversationService.addMessage(sessionId, 'bot', answer);
+        console.log(`[Conversation] Messages saved for session ${sessionId}`);
+      } catch (convError: any) {
+        // Gracefully skip conversation saving if Firestore has issues
+        // The chat experience isn't affected
+        if (convError.code === 5 || convError.message?.includes('NOT_FOUND')) {
+          console.warn('[Conversation] Skipping - Firestore conversations collection not available');
+        } else {
+          console.warn('Failed to save conversation messages:', convError.message);
+        }
+      }
 
     } catch (error: any) {
       console.error('Error in chat controller:', error);

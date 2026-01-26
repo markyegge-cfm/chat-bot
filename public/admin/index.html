@@ -70,11 +70,23 @@
   </div>
 
   <!-- Scripts -->
+  <!-- Load API Service first -->
+  <script src="js/services/apiService.js"></script>
+  
+  <!-- Then load components and sections -->
   <script src="js/components/Sidebar.js"></script>
   <script src="js/components/Header.js"></script>
   <script src="js/sections/KnowledgeBase.js"></script>
   <script src="js/sections/Conversations.js"></script>
   <script src="js/sections/Escalations.js"></script>
+  
+  <!-- Initialize app last -->
+  <script>
+    // Initialize API Service globally before app loads
+    window.apiService = new APIService();
+    console.log('✅ Global API Service initialized');
+  </script>
+  
   <script src="js/main.js"></script>
 </body>
 

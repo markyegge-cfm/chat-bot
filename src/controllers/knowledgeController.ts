@@ -149,6 +149,15 @@ export const createKnowledge = async (req: Request, res: Response): Promise<void
 
     try { fs.unlinkSync(tempFile); } catch (e) {}
 
+    // Handle case where ragFile might not have a name property
+    if (!ragFile || !ragFile.name) {
+      console.error('❌ RAG file upload returned invalid structure:', ragFile);
+      return (res as any).status(500).json({
+        success: false,
+        error: 'Failed to upload file to RAG - invalid response from Vertex AI',
+      });
+    }
+
     // 2. Save metadata to Firebase Firestore
     const knowledgeData = await firebaseService.saveKnowledge({
       ragFileId: ragFile.name, // Store full RAG file resource name

@@ -61,6 +61,9 @@ class FirebaseService {
        */
       this.db = getFirestore(this.databaseId);
       
+      // Enable ignoreUndefinedProperties to handle cases where fields might be undefined
+      this.db.settings({ ignoreUndefinedProperties: true });
+      
       // Initialize Auth
       this.auth = getAuth();
       
@@ -78,6 +81,13 @@ class FirebaseService {
    */
   isInitialized(): boolean {
     return this.initialized && this.db !== null;
+  }
+
+  /**
+   * Get the Firestore instance (for use by other services)
+   */
+  getDb(): admin.firestore.Firestore | null {
+    return this.db;
   }
 
   /**
@@ -324,6 +334,173 @@ class FirebaseService {
 
     try {
       const snapshot = await this.db!.collection('knowledge').count().get();
+      return snapshot.data().count;
+    } catch (error: any) {
+      if (error.code === 5) return 0;
+      throw error;
+    }
+  }
+
+  // ============================================
+  // CONVERSATION METHODS
+  // ============================================
+
+  /**
+   * Start a new conversation session
+   */
+  async startConversation(sessionId: string, userIdentifier?: string): Promise<void> {
+    if (!this.db) await this.initialize();
+
+    await this.db!.collection('conversations').doc(sessionId).set({
+      id: sessionId,
+      userId: userIdentifier || 'anonymous',
+      status: 'active',
+      startedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      messageCount: 0,
+      lastMessage: '',
+    });
+  }
+
+  /**
+   * Add a message to a conversation
+   */
+  async addMessage(sessionId: string, sender: 'user' | 'assistant', content: string): Promise<void> {
+    if (!this.db) await this.initialize();
+
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    
+    // Add message to subcollection
+    await this.db!.collection('conversations')
+      .doc(sessionId)
+      .collection('messages')
+      .add({
+        sender,
+        content,
+        timestamp,
+      });
+
+    // Update conversation metadata
+    await this.db!.collection('conversations').doc(sessionId).update({
+      lastMessage: content.substring(0, 100),
+      updatedAt: timestamp,
+      messageCount: admin.firestore.FieldValue.increment(1),
+    });
+  }
+
+  /**
+   * Get all conversations (with pagination)
+   */
+  async getAllConversations(page: number = 1, limit: number = 50): Promise<any[]> {
+    if (!this.db) await this.initialize();
+
+    try {
+      const skip = (page - 1) * limit;
+      const snapshot = await this.db!
+        .collection('conversations')
+        .orderBy('updatedAt', 'desc')
+        .limit(limit)
+        .offset(skip)
+        .get();
+
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+    } catch (error: any) {
+      if (error.code === 5) return [];
+      throw error;
+    }
+  }
+
+  /**
+   * Get a specific conversation
+   */
+  async getConversation(sessionId: string): Promise<any> {
+    if (!this.db) await this.initialize();
+
+    try {
+      const doc = await this.db!.collection('conversations').doc(sessionId).get();
+      if (!doc.exists) return null;
+
+      return {
+        id: doc.id,
+        ...doc.data(),
+      };
+    } catch (error: any) {
+      if (error.code === 5) return null;
+      throw error;
+    }
+  }
+
+  /**
+   * Get messages for a conversation
+   */
+  async getConversationMessages(sessionId: string): Promise<any[]> {
+    if (!this.db) await this.initialize();
+
+    try {
+      const snapshot = await this.db!
+        .collection('conversations')
+        .doc(sessionId)
+        .collection('messages')
+        .orderBy('timestamp', 'asc')
+        .get();
+
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+    } catch (error: any) {
+      if (error.code === 5) return [];
+      throw error;
+    }
+  }
+
+  /**
+   * Update conversation status
+   */
+  async updateConversationStatus(sessionId: string, status: string): Promise<void> {
+    if (!this.db) await this.initialize();
+
+    await this.db!.collection('conversations').doc(sessionId).update({
+      status,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
+  /**
+   * Get conversations by status
+   */
+  async getConversationsByStatus(status: string, limit: number = 50): Promise<any[]> {
+    if (!this.db) await this.initialize();
+
+    try {
+      const snapshot = await this.db!
+        .collection('conversations')
+        .where('status', '==', status)
+        .orderBy('updatedAt', 'desc')
+        .limit(limit)
+        .get();
+
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+    } catch (error: any) {
+      if (error.code === 5) return [];
+      throw error;
+    }
+  }
+
+  /**
+   * Get conversation count
+   */
+  async getConversationCount(): Promise<number> {
+    if (!this.db) await this.initialize();
+
+    try {
+      const snapshot = await this.db!.collection('conversations').count().get();
       return snapshot.data().count;
     } catch (error: any) {
       if (error.code === 5) return 0;
