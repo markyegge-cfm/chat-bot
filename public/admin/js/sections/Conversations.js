@@ -91,7 +91,7 @@ class Conversations {
       }
 
       const html = conversations.map((conv, idx) => {
-         // Handle Firestore timestamp objects
+         // Handle Firestore timestamp objects.
          let startTime;
          if (conv.startedAt && typeof conv.startedAt === 'object' && conv.startedAt._seconds) {
             // Firestore Timestamp object
@@ -177,7 +177,7 @@ class Conversations {
          });
       }
 
-      // Handle window resize: reset to desktop layout when leaving mobile
+      // Handle window resize: reset to desktop layout when leaving mobil
       window.addEventListener('resize', () => {
          if (!isMobile()) {
             conversationList.classList.remove('hidden');
@@ -201,7 +201,7 @@ class Conversations {
             </div>
          `;
 
-         // Fetch conversation messages from API
+         // Fetch conversation messages from APi
          const messages = await window.apiService.getConversationMessages(conversationId);
          
          if (!messages || messages.length === 0) {
