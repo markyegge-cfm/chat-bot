@@ -1,8 +1,8 @@
 import { MemorySaver, StateGraph } from '@langchain/langgraph';
 import type { Request, Response } from 'express';
-import conversationService from '../services/conversationService';
+// import conversationService from '../services/conversationService'; // Using firebaseService directly
 import firebaseService from '../services/firebaseService';
-import { vertexAIRag } from '../services/vertexAIRagService';
+import { FALLBACK_MESSAGE, vertexAIRag } from '../services/vertexAIRagService';
 
 // Define the state interface
 interface ChatState {
@@ -110,12 +110,14 @@ const workflow = new StateGraph<{ __root__: any }>({
       console.log(`RAG retrieval for: ${message.substring(0, 50)}...`);
       const answer = await vertexAIRag.retrieveContextsWithRAG(message, 5);
       
-      // Save to cache for future use
-      try {
-        await firebaseService.saveToCache(message, answer);
-        console.log('Saved answer to Firebase cache');
-      } catch (cacheError) {
-        console.warn('Failed to save to cache:', cacheError);
+      // Save to cache for future use (ONLY if it's not a fallback message)
+      if (answer !== FALLBACK_MESSAGE) {
+        try {
+          await firebaseService.saveToCache(message, answer);
+          console.log('Saved answer to Firebase cache');
+        } catch (cacheError) {
+          console.warn('Failed to save to cache:', cacheError);
+        }
       }
       
       return {
@@ -182,7 +184,31 @@ workflow
 const memory = new MemorySaver();
 const graph = workflow.compile({ checkpointer: memory });
 
+/**
+ * Utility to detect emails in strings
+ */
+function extractEmail(text: string): string | null {
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+  const match = text.match(emailRegex);
+  return match ? match[0] : null;
+}
+
 export class ChatController {
+  
+  // New method for API endpoint: GET /api/escalations
+  static async getEscalations(req: Request, res: Response): Promise<void> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      
+      const result = await firebaseService.getEscalations(page, limit);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      console.error('Error fetching escalations:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch escalations' });
+    }
+  }
+
   static async handleMessage(req: Request, res: Response): Promise<void> {
     const { message, sessionId } = req.body;
 
@@ -213,6 +239,67 @@ export class ChatController {
           throw new Error('RAG service unavailable');
         }
       }
+
+      // ==========================================
+      // ESCALATION LOGIC (Check for Email Response)
+      // ==========================================
+      const email = extractEmail(message);
+      if (email) {
+        console.log(`📧 Detected email in user message: ${email}`);
+        
+        // Fetch recent conversation history to see if the bot asked for it
+        const history = await firebaseService.getConversationMessages(sessionId);
+        
+        // We look for the pattern: 
+        // 1. User asks question (Question to escalate)
+        // 2. Bot replies with FALLBACK_MESSAGE (or similar)
+        // 3. User replies with Email (Current message)
+        
+        if (history.length >= 2) {
+          const lastBotMsg = history[history.length - 1]; // The message before current one should be bot
+          const prevUserMsg = history[history.length - 2]; // The message before that was the question
+          
+          // Check if the last bot message was the fallback prompt
+          if (lastBotMsg.sender === 'assistant' && 
+              (lastBotMsg.content.includes("share your email") || lastBotMsg.content === FALLBACK_MESSAGE)) {
+            
+            const questionToEscalate = prevUserMsg.content;
+            console.log(`📝 Creating escalation for question: "${questionToEscalate}"`);
+
+            await firebaseService.createEscalation({
+              user: email,
+              question: questionToEscalate,
+              reason: 'Low confidence',
+              status: 'open'
+            });
+
+            // Send confirmation response immediately
+            const confirmationMsg = "Thank you! We've created a support ticket for your issue. Our team will review it and contact you shortly via email.";
+            
+            // Save to history
+            await firebaseService.addMessage(sessionId, 'user', message);
+            await firebaseService.addMessage(sessionId, 'assistant', confirmationMsg);
+
+            // Stream the response
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            
+            res.write(`data: ${JSON.stringify({ 
+              chunk: confirmationMsg,
+              isCached: false,
+              sessionId 
+            })}\n\n`);
+            res.write('data: [DONE]\n\n');
+            res.end();
+            return; // Stop further processing
+          }
+        }
+      }
+
+      // ==========================================
+      // NORMAL FLOW (LangGraph)
+      // ==========================================
 
       // Set up config with thread_id for memory
       const config = { 
@@ -266,21 +353,19 @@ export class ChatController {
       res.end();
 
       // Save user message and bot response to conversation session (async, non-blocking)
-      // This is optional - if it fails, chat still works
       try {
         // Create conversation session if it doesn't exist
-        const existingSession = await conversationService.getSession(sessionId);
+        // Note: Using firebaseService instead of conversationService to ensure availability
+        const existingSession = await firebaseService.getConversation(sessionId);
         if (!existingSession) {
-          await conversationService.createSession('anonymous', sessionId);
+          await firebaseService.startConversation(sessionId, 'anonymous');
           console.log(`[Conversation] New session created: ${sessionId}`);
         }
 
-        await conversationService.addMessage(sessionId, 'user', message);
-        await conversationService.addMessage(sessionId, 'bot', answer);
+        await firebaseService.addMessage(sessionId, 'user', message);
+        await firebaseService.addMessage(sessionId, 'assistant', answer);
         console.log(`[Conversation] Messages saved for session ${sessionId}`);
       } catch (convError: any) {
-        // Gracefully skip conversation saving if Firestore has issues
-        // The chat experience isn't affected
         if (convError.code === 5 || convError.message?.includes('NOT_FOUND')) {
           console.warn('[Conversation] Skipping - Firestore conversations collection not available');
         } else {

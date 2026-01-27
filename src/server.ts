@@ -9,6 +9,7 @@ import path from 'path';
 import authRoutes from './routes/authRoutes';
 import chatRoutes from './routes/chatRoutes';
 import conversationRoutes from './routes/conversationRoutes';
+import escalationRoutes from './routes/escalationRoutes';
 import knowledgeRoutes from './routes/knowledgeRoutes';
 import vertexAIRag from './services/vertexAIRagService';
 
@@ -62,6 +63,7 @@ app.use(authRoutes);
 app.use(chatRoutes);
 app.use(knowledgeRoutes);
 app.use('/api', conversationRoutes);
+app.use('/api', escalationRoutes);
 
 // ============================================
 // 404 HANDLER

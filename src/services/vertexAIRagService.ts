@@ -3,6 +3,9 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
+// Export the fallback message so ChatController can match against it
+export const FALLBACK_MESSAGE = `That's a great question! I don't have that specific information in our knowledge base at the moment. Could you share your email address? Our team will be happy to get back to you with a detailed answer shortly.`;
+
 interface RagFile {
   id: string;
   name: string;
@@ -209,7 +212,8 @@ class VertexAIRagService {
 
 **Knowledge Base Answers**: Provide clear, accurate answers based on knowledge base information. Be professional and courteous.
 
-**Email Collection**: If you cannot find the answer in the knowledge base, acknowledge the question professionally and politely ask for their email: "I'd love to help! Could you share your email so our team can get back to you with the answer?"
+**Email Collection**: If you cannot find the answer in the knowledge base, acknowledge the question professionally and politely ask for their email.
+Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
 
 **Tone**: Professional yet friendly, clear and concise, empathetic. Keep responses to 1-4 sentences.`;
       
@@ -239,7 +243,7 @@ class VertexAIRagService {
 
       // Fallback response if no answer is generated
       if (!answer || answer.length < 15) {
-        answer = `That's a great question! I don't have that specific information in our knowledge base at the moment. Could you share your email address? Our team will be happy to get back to you with a detailed answer shortly.`;
+        answer = FALLBACK_MESSAGE;
       }
 
       // Update local cache
@@ -248,7 +252,7 @@ class VertexAIRagService {
       return answer;
     } catch (err: any) {
       console.error('[RAG] Error:', err.message);
-      return `I apologize for the inconvenience. I'm having trouble retrieving information at the moment. Would you mind sharing your email? Our support team will be delighted to assist you.`;
+      return FALLBACK_MESSAGE;
     }
   }
 

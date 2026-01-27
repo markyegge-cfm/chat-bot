@@ -1,4 +1,13 @@
 class Escalations {
+   // State management for pagination
+   static state = {
+      currentPage: 1,
+      limit: 8,
+      total: 0,
+      totalPages: 1,
+      isLoading: false
+   };
+
    static render() {
       return `
       <div class="px-8 py-6">
@@ -6,7 +15,7 @@ class Escalations {
         <div class="flex justify-between items-center mb-6">
            <div class="flex items-center gap-3">
              <h1 class="text-[24px] font-bold text-[#1E293B]">Escalations Issues</h1>
-             <span class="bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-md text-[13px] font-medium" id="escalations-count">12</span>
+             <span class="bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-md text-[13px] font-medium" id="escalations-count">...</span>
            </div>
         </div>
 
@@ -49,7 +58,7 @@ class Escalations {
                  </tr>
               </thead>
               <tbody class="divide-y divide-gray-100" id="escalations-table-body">
-                 <tr><td colspan="6" class="p-4 text-center text-gray-400 text-sm">Loading...</td></tr>
+                 <tr><td colspan="6" class="p-8 text-center text-gray-400 text-sm">Loading escalations...</td></tr>
               </tbody>
            </table>
         </div>
@@ -57,12 +66,12 @@ class Escalations {
         <!-- Pagination -->
         <div class="flex justify-between items-center text-[13px] font-medium text-gray-600 px-2 mt-4">
            <div class="flex items-center gap-3">
-              <span id="escalations-page-info">Page 1 of 4</span>
+              <span id="escalations-page-info">Page 1 of 1</span>
               <div class="relative">
-                 <select class="appearance-none bg-white border border-gray-200 rounded-md px-3 py-1.5 pr-8 focus:outline-none focus:border-gray-300 cursor-pointer text-gray-700 text-[13px]">
-                    <option>8</option>
-                    <option>16</option>
-                    <option>24</option>
+                 <select id="escalations-limit-select" class="appearance-none bg-white border border-gray-200 rounded-md px-3 py-1.5 pr-8 focus:outline-none focus:border-gray-300 cursor-pointer text-gray-700 text-[13px]">
+                    <option value="8">8</option>
+                    <option value="16">16</option>
+                    <option value="24">24</option>
                  </select>
                  <svg class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="6 9 12 15 18 9"></polyline>
@@ -71,18 +80,22 @@ class Escalations {
            </div>
            
            <div class="flex items-center gap-4">
-              <span id="escalations-page-info2">Page 1 of 4</span>
+              <span id="escalations-page-info2">Page 1 of 1</span>
               <div class="flex items-center gap-1">
-                 <button class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" disabled>
+                 <!-- First Page -->
+                 <button id="esc-first-btn" class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" disabled>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
                  </button>
-                 <button class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" disabled>
+                 <!-- Previous Page -->
+                 <button id="esc-prev-btn" class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" disabled>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400"><polyline points="15 18 9 12 15 6"></polyline></svg>
                  </button>
-                 <button class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600 transition-colors">
+                 <!-- Next Page -->
+                 <button id="esc-next-btn" class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600 transition-colors">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
                  </button>
-                 <button class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600 transition-colors">
+                 <!-- Last Page -->
+                 <button id="esc-last-btn" class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600 transition-colors">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
                  </button>
               </div>
@@ -94,7 +107,7 @@ class Escalations {
 
    static renderRows(data = []) {
       if (data.length === 0) {
-         return '<tr><td colspan="6" class="p-4 text-center text-gray-400 text-sm">No escalations found</td></tr>';
+         return '<tr><td colspan="6" class="p-8 text-center text-gray-400 text-sm">No escalations found</td></tr>';
       }
 
       return data.map(row => `
@@ -107,7 +120,9 @@ class Escalations {
              <span class="text-[15px] font-semibold text-gray-700">${this.escapeHtml(row.user)}</span>
            </div>
         </td>
-        <td class="py-5 px-4 text-[14px] text-gray-600 font-medium max-w-md truncate">${this.escapeHtml(row.question || '-')}</td>
+        <td class="py-5 px-4 text-[14px] text-gray-600 font-medium max-w-md truncate" title="${this.escapeHtml(row.question)}">
+          ${this.escapeHtml(row.question || '-')}
+        </td>
         <td class="py-5 px-4">
            <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[13px] font-medium ${this.getReasonBadgeClass(row.reason)}">
               <span class="w-2 h-2 rounded-full" style="background-color: ${this.getReasonColor(row.reason)}"></span>
@@ -143,6 +158,7 @@ class Escalations {
    }
 
    static escapeHtml(text) {
+      if (!text) return '';
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
@@ -164,84 +180,120 @@ class Escalations {
       }
    }
 
-   static async loadEscalations() {
+   static async loadEscalations(page = 1) {
+      this.state.isLoading = true;
+      this.state.currentPage = page;
+      
+      const tbody = document.getElementById('escalations-table-body');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-400 text-sm">Loading...</td></tr>';
+
       try {
-         // Sample data matching the screenshot
-         const escalations = [
-            {
-               user: 'cameron.w@ironkey.com',
-               question: 'How can I verify if I have already purchased a course?',
-               reason: 'Low confidence',
-               date: '2025-12-29T05:43:00'
-            },
-            {
-               user: 'floyd.miles@ironkey.com',
-               question: 'How can I find the location of content within the Elite Course?',
-               reason: 'Low confidence',
-               date: '2025-12-12T01:36:00'
-            },
-            {
-               user: 'bessie.cooper@ironkey.com',
-               question: 'What should I do if I can see the next lesson but am unable to click it?',
-               reason: 'Low confidence',
-               date: '2025-11-18T03:41:00'
-            },
-            {
-               user: 'annette.black@ironkey.com',
-               question: 'It is not an option; I see the next lesson but am not able to click on it?',
-               reason: 'Low confidence',
-               date: '2025-11-14T12:01:00'
-            },
-            {
-               user: 'kristin.watson@ironkey.com',
-               question: 'What should I do if I\'m having trouble playing a video?',
-               reason: 'Low confidence',
-               date: '2025-10-11T11:16:00'
-            },
-            {
-               user: 'courtney.henry@ironkey.com',
-               question: 'What program includes a WhatsApp community?',
-               reason: 'Low confidence',
-               date: '2025-10-02T10:51:00'
-            },
-            {
-               user: 'darrell.steward@ironkey.com',
-               question: 'Is there a community with the Elite course?',
-               reason: 'Low confidence',
-               date: '2025-09-12T05:16:00'
-            },
-            {
-               user: 'jenny.wilson@ironkey.com',
-               question: 'Is the Elite program suitable for international customers?',
-               reason: 'Low confidence',
-               date: '2025-09-12T02:41:00'
-            }
-         ];
+         const api = new APIService(); 
+         const result = await api.getEscalations(this.state.currentPage, this.state.limit);
+         
+         const escalations = result.escalations || [];
+         this.state.total = result.total || 0;
+         this.state.totalPages = result.totalPages || Math.ceil(this.state.total / this.state.limit) || 1;
          
          // Update UI
-         document.getElementById('escalations-count').textContent = escalations.length;
-         document.getElementById('escalations-table-body').innerHTML = this.renderRows(escalations);
-         document.getElementById('escalations-page-info').textContent = `Page 1 of ${Math.ceil(escalations.length / 8) || 1}`;
-         document.getElementById('escalations-page-info2').textContent = `Page 1 of ${Math.ceil(escalations.length / 8) || 1}`;
+         const countEl = document.getElementById('escalations-count');
+         if (countEl) countEl.textContent = this.state.total;
+         
+         if (tbody) tbody.innerHTML = this.renderRows(escalations);
+         
+         this.updatePaginationUI();
+         
       } catch (error) {
          console.error('Failed to load escalations:', error);
-         document.getElementById('escalations-table-body').innerHTML = 
-            '<tr><td colspan="6" class="p-4 text-center text-red-500 text-sm">Failed to load escalations</td></tr>';
+         if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-red-500 text-sm">Failed to load escalations. Is the API running?</td></tr>';
+      } finally {
+         this.state.isLoading = false;
+      }
+   }
+
+   static updatePaginationUI() {
+      const { currentPage, totalPages } = this.state;
+      
+      // Update text
+      const info1 = document.getElementById('escalations-page-info');
+      const info2 = document.getElementById('escalations-page-info2');
+      if (info1) info1.textContent = `Page ${currentPage} of ${totalPages}`;
+      if (info2) info2.textContent = `Page ${currentPage} of ${totalPages}`;
+
+      // Update buttons state
+      const firstBtn = document.getElementById('esc-first-btn');
+      const prevBtn = document.getElementById('esc-prev-btn');
+      const nextBtn = document.getElementById('esc-next-btn');
+      const lastBtn = document.getElementById('esc-last-btn');
+
+      if (firstBtn) {
+         firstBtn.disabled = currentPage <= 1;
+         firstBtn.classList.toggle('text-gray-400', currentPage <= 1);
+         firstBtn.classList.toggle('text-gray-600', currentPage > 1);
+      }
+      
+      if (prevBtn) {
+         prevBtn.disabled = currentPage <= 1;
+         prevBtn.classList.toggle('text-gray-400', currentPage <= 1);
+         prevBtn.classList.toggle('text-gray-600', currentPage > 1);
+      }
+      
+      if (nextBtn) {
+         nextBtn.disabled = currentPage >= totalPages;
+         nextBtn.classList.toggle('text-gray-400', currentPage >= totalPages);
+         nextBtn.classList.toggle('text-gray-600', currentPage < totalPages);
+      }
+      
+      if (lastBtn) {
+         lastBtn.disabled = currentPage >= totalPages;
+         lastBtn.classList.toggle('text-gray-400', currentPage >= totalPages);
+         lastBtn.classList.toggle('text-gray-600', currentPage < totalPages);
       }
    }
 
    static afterRender() {
-      // Load escalations
-      this.loadEscalations();
+      // Initial Load
+      this.loadEscalations(1);
 
-      // Add search functionality
+      // Search functionality
       const searchInput = document.getElementById('escalations-search');
+      let searchTimeout;
       if (searchInput) {
          searchInput.addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            // Add search logic here when connected to backend
-            console.log('Searching for:', query);
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+               const query = e.target.value.toLowerCase();
+               console.log('Searching for:', query);
+               // Future: pass query to loadEscalations
+            }, 500);
          });
       }
+
+      // Limit Select
+      const limitSelect = document.getElementById('escalations-limit-select');
+      if (limitSelect) {
+         limitSelect.value = this.state.limit;
+         limitSelect.addEventListener('change', (e) => {
+            this.state.limit = parseInt(e.target.value);
+            this.loadEscalations(1);
+         });
+      }
+
+      // Pagination Buttons
+      document.getElementById('esc-first-btn')?.addEventListener('click', () => {
+         if (this.state.currentPage > 1) this.loadEscalations(1);
+      });
+
+      document.getElementById('esc-prev-btn')?.addEventListener('click', () => {
+         if (this.state.currentPage > 1) this.loadEscalations(this.state.currentPage - 1);
+      });
+
+      document.getElementById('esc-next-btn')?.addEventListener('click', () => {
+         if (this.state.currentPage < this.state.totalPages) this.loadEscalations(this.state.currentPage + 1);
+      });
+
+      document.getElementById('esc-last-btn')?.addEventListener('click', () => {
+         if (this.state.currentPage < this.state.totalPages) this.loadEscalations(this.state.totalPages);
+      });
    }
 }

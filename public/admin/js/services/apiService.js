@@ -18,6 +18,10 @@ class APIService {
     return headers;
   }
 
+  // ============================================
+  // KNOWLEDGE BASE METHODS
+  // ============================================
+
   async getKnowledgeBase() {
     try {
       const response = await fetch(`${this.baseUrl}/api/knowledge`, { headers: this.getHeaders() });
@@ -178,6 +182,44 @@ class APIService {
           body: JSON.stringify({ topic, summary })
         }
       );
+      return await response.json();
+    } catch (e) {
+      console.error("API Error:", e);
+      return { success: false };
+    }
+  }
+
+  // ============================================
+  // ESCALATION METHODS
+  // ============================================
+
+  /**
+   * Get all escalations with pagination
+   */
+  async getEscalations(page = 1, limit = 8) {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/escalations?page=${page}&limit=${limit}`,
+        { headers: this.getHeaders() }
+      );
+      const result = await response.json();
+      return result.success ? result : { escalations: [], total: 0, totalPages: 0 };
+    } catch (e) {
+      console.error("API Error:", e);
+      return { escalations: [], total: 0, totalPages: 0 };
+    }
+  }
+
+  /**
+   * Create a new escalation
+   */
+  async createEscalation(user, question, reason) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/escalations`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ user, question, reason })
+      });
       return await response.json();
     } catch (e) {
       console.error("API Error:", e);

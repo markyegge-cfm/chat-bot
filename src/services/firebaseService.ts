@@ -19,6 +19,15 @@ interface KnowledgeMetadata {
   updatedAt: string;
 }
 
+export interface Escalation {
+  id: string;
+  user: string;     // Email
+  question: string; // The question that failed
+  reason: string;   // e.g., 'Low confidence'
+  date: string;     // ISO string
+  status: 'open' | 'resolved';
+}
+
 // Define the Admin User structure
 interface AdminUser {
   uid: string;
@@ -504,6 +513,71 @@ class FirebaseService {
       return snapshot.data().count;
     } catch (error: any) {
       if (error.code === 5) return 0;
+      throw error;
+    }
+  }
+
+  // ============================================
+  // ESCALATION METHODS
+  // ============================================
+
+  /**
+   * Create a new escalation record
+   */
+  async createEscalation(data: Omit<Escalation, 'id' | 'date'>): Promise<string> {
+    if (!this.db) await this.initialize();
+
+    const timestamp = new Date().toISOString();
+    
+    try {
+      const docRef = await this.db!.collection('escalations').add({
+        ...data,
+        date: timestamp,
+        status: 'open',
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      return docRef.id;
+    } catch (error: any) {
+      console.error('Failed to create escalation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get escalations with pagination
+   */
+  async getEscalations(page: number = 1, limit: number = 20): Promise<{ escalations: Escalation[], total: number }> {
+    if (!this.db) await this.initialize();
+
+    try {
+      // Get total count first
+      const countSnapshot = await this.db!.collection('escalations').count().get();
+      const total = countSnapshot.data().count;
+
+      const skip = (page - 1) * limit;
+      const snapshot = await this.db!
+        .collection('escalations')
+        .orderBy('date', 'desc')
+        .limit(limit)
+        .offset(skip)
+        .get();
+
+      const escalations = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          user: data.user,
+          question: data.question,
+          reason: data.reason,
+          date: data.date,
+          status: data.status
+        } as Escalation;
+      });
+
+      return { escalations, total };
+    } catch (error: any) {
+      console.error('Failed to fetch escalations:', error);
+      if (error.code === 5) return { escalations: [], total: 0 };
       throw error;
     }
   }
