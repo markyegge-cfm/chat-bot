@@ -15,6 +15,16 @@
 
     injectStyles();
     attachEventListeners();
+
+    // Expose sendSuggestion globally
+    window.sendSuggestion = (text) => {
+      const input = document.getElementById('chatbot-input');
+      const sendBtn = document.getElementById('chatbot-send');
+      if (input && sendBtn) {
+        input.value = text;
+        sendBtn.click();
+      }
+    };
   }
 
   function getWidgetHTML() {
@@ -44,6 +54,11 @@
           <div class="chat-intro-text">Welcome to our Website! Ask us anything.</div>
           <div class="chatbot-message bot-message">
             <p>Hi! How can I support you today?</p>
+          </div>
+          <div class="suggestion-chips" id="initial-suggestions">
+            <button class="suggestion-chip" onclick="window.sendSuggestion('Learn About Our Courses')">1. Learn About Our Courses</button>
+            <button class="suggestion-chip" onclick="window.sendSuggestion('Help Me Choose a Program')">2. Help Me Choose a Program</button>
+            <button class="suggestion-chip" onclick="window.sendSuggestion('Watch Free Training')">3. Watch Free Training</button>
           </div>
         </div>
 
@@ -98,6 +113,7 @@
       .chatbot-window {
         width: 410px;
         height: 705px;
+        max-height: calc(100vh - 120px); /* Responsive fix for desktop */
         background: #FFFFFF;
         box-shadow: 0 12px 48px rgba(0,0,0,0.12);
         border-radius: 24px 24px 32px 32px;
@@ -231,6 +247,57 @@
         border: none;
       }
 
+      .suggestion-chips {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 0 20px 0 20px;
+        margin-bottom: 0px;
+      }
+
+      .suggestion-chip {
+        background: #FFFFFF;
+        border: 1px solid #D59800;
+        color: #D59800;
+        padding: 10px 16px;
+        border-radius: 12px;
+        font-family: 'Outfit', sans-serif;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+        width: 100%;
+      }
+
+      .suggestion-chip:hover {
+        background: #FFF8E1;
+      }
+
+      .bot-followup-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 8px;
+        width: 100%;
+      }
+      
+      .followup-chip {
+        background: #ffffff;
+        border: 1px solid #D59800;
+        color: #D59800;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+        text-align: left;
+        transition: all 0.2s;
+        font-family: 'Outfit', sans-serif;
+      }
+      
+      .followup-chip:hover {
+        background: #FFF8E1;
+      }
+
       /* Mobile Responsive Styles */
       @media (max-width: 768px) {
         #ai-chatbot-widget { bottom: 16px; right: 16px; }
@@ -278,6 +345,12 @@
       input.value = '';
       sendBtn.disabled = true;
 
+      // Remove initial suggestions if present
+      const initialSuggestions = document.getElementById('initial-suggestions');
+      if (initialSuggestions) {
+        initialSuggestions.remove();
+      }
+
       // Placeholder for streaming bot response
       const { textNode, metadataNode } = addStreamingMessage();
       let fullResponse = "";
@@ -300,15 +373,15 @@
 
           const chunk = decoder.decode(value);
           const lines = chunk.split('\n');
-          
+
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const dataStr = line.replace('data: ', '').trim();
               if (!dataStr || dataStr === '[DONE]') continue;
-              
+
               try {
                 const parsed = JSON.parse(dataStr);
-                
+
                 // Handle streaming chunks - the format is { chunk: "text" }
                 if (parsed.chunk) {
                   fullResponse += parsed.chunk;
@@ -316,7 +389,7 @@
                   const messagesContainer = document.getElementById('chatbot-messages');
                   messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 }
-                
+
                 // Handle errors
                 if (parsed.error) {
                   textNode.innerText = parsed.error;
@@ -327,10 +400,37 @@
             }
           }
         }
-        
+
+        // Parse Follow-up Questions
+        const followupMatch = fullResponse.match(/<<<FOLLOWUP: (.*?)>>>/);
+        if (followupMatch) {
+          fullResponse = fullResponse.replace(followupMatch[0], '').trim();
+          textNode.innerText = fullResponse; // Clean text
+
+          const questions = followupMatch[1].split('|').map(q => q.trim());
+          if (questions.length > 0) {
+            const followupContainer = document.createElement('div');
+            followupContainer.className = 'bot-followup-container';
+
+            questions.forEach(q => {
+              const btn = document.createElement('button');
+              btn.className = 'followup-chip';
+              btn.innerText = q;
+              btn.onclick = () => window.sendSuggestion(q);
+              followupContainer.appendChild(btn);
+            });
+
+            // Append to the message container (not inside the p tag)
+            // textNode.parentNode is the msgDiv
+            textNode.parentNode.appendChild(followupContainer);
+            const messagesContainer = document.getElementById('chatbot-messages');
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }
+        }
+
         // Final update with timestamp
         metadataNode.innerText = `AI Agent • ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-        
+
         // Replace placeholder message with final response if empty
         if (!fullResponse) {
           textNode.innerText = 'Sorry, I could not generate a response.';
@@ -380,19 +480,19 @@
     const messagesContainer = document.getElementById('chatbot-messages');
     const msgDiv = document.createElement('div');
     msgDiv.className = 'chatbot-message bot-message';
-    
+
     const p = document.createElement('p');
     p.innerText = '...';
-    
+
     const metadata = document.createElement('div');
     metadata.className = 'message-metadata';
     metadata.innerText = 'AI Agent • typing...';
-    
+
     msgDiv.appendChild(p);
     msgDiv.appendChild(metadata);
     messagesContainer.appendChild(msgDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    
+
     return { textNode: p, metadataNode: metadata };
   }
 

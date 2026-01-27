@@ -39,7 +39,7 @@ class VertexAIRagService {
 
   // Keeps metadata mapping only (NOT caching answers)
   private qaCache: Map<string, { question: string; answer: string }> = new Map();
-  
+
   // Local answer cache for fast repeated queries
   private localAnswerCache: Map<string, CacheEntry> = new Map();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -115,17 +115,17 @@ class VertexAIRagService {
   private checkLocalCache(query: string): string | null {
     const sanitizedQuery = query.trim().toLowerCase();
     const entry = this.localAnswerCache.get(sanitizedQuery);
-    
+
     if (entry && (Date.now() - entry.timestamp) < this.CACHE_TTL) {
       console.log(`Local cache hit for query: ${query.substring(0, 50)}...`);
       return entry.answer;
     }
-    
+
     // Remove expired entry
     if (entry) {
       this.localAnswerCache.delete(sanitizedQuery);
     }
-    
+
     return null;
   }
 
@@ -136,7 +136,7 @@ class VertexAIRagService {
       answer,
       timestamp: Date.now()
     });
-    
+
     // Limit cache size
     if (this.localAnswerCache.size > this.MAX_CACHE_SIZE) {
       const firstKey = this.localAnswerCache.keys().next().value;
@@ -166,22 +166,22 @@ class VertexAIRagService {
     });
 
     console.log('[RAG Upload] Response:', JSON.stringify(res.data).substring(0, 200));
-    
+
     // IMPORTANT: Resource name is nested inside ragFile object
     const fullResourceName = res.data.ragFile?.name;
     if (!fullResourceName) {
       console.error('❌ ERROR: RAG API did not return a resource name. Response:', JSON.stringify(res.data, null, 2));
       throw new Error('RAG API response missing required "ragFile.name" field');
     }
-    
+
     console.log(`✅ RAG File Full Resource Name: ${fullResourceName}`);
-    
+
     // Extract just the numeric ID from the resource name for cache and reference
     const fileId = fullResourceName.split('/').pop() || uuidv4();
     console.log(`ℹ️  RAG File Numeric ID: ${fileId}`);
-    
+
     const resourceName = fullResourceName; // Use the full name returned by Vertex AI
-    
+
     this.qaCache.set(fileId, { question: displayName || 'Untitled', answer: description || '' });
 
     return {
@@ -216,7 +216,7 @@ class VertexAIRagService {
 
     try {
       console.log(`Making RAG API call for: ${query.substring(0, 50)}...`);
-      
+
       // Enhanced system prompt for better greeting handling and email collection
       const systemPrompt = `You are a helpful and professional customer service AI assistant.
 
@@ -227,8 +227,11 @@ class VertexAIRagService {
 **Email Collection**: If you cannot find the answer in the knowledge base, acknowledge the question professionally and politely ask for their email.
 Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
 
-**Tone**: Professional yet friendly, clear and concise, empathetic. Keep responses to 1-4 sentences.`;
-      
+**Tone**: Professional yet friendly, clear and concise, empathetic. Keep responses to 1-4 sentences.
+
+**Follow-up Questions**: After providing the answer, suggest 2-3 short, relevant follow-up questions the user might ask next. Format them exactly like this at the end of your response:
+<<<FOLLOWUP: Question 1 | Question 2 | Question 3>>>`;
+
       const res = await this.client.post(geminiUrl, {
         systemInstruction: {
           role: 'user',
@@ -316,13 +319,13 @@ Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
 
   async deleteFile(fileIdOrResourceName: string): Promise<boolean> {
     if (!this.client) return false;
-    
+
     if (!fileIdOrResourceName) {
       throw new Error('File ID or resource name is required for deletion');
     }
-    
+
     let resourceName: string;
-    
+
     // If it's already a full resource name (contains /ragFiles/), use it as-is
     if (fileIdOrResourceName.includes('/ragFiles/')) {
       resourceName = fileIdOrResourceName;
@@ -332,18 +335,18 @@ Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
       resourceName = `projects/${this.config.projectId}/locations/${this.config.location}/ragCorpora/${this.config.corpusId}/ragFiles/${fileIdOrResourceName}`;
       console.log(`📋 Constructed resource name from ID '${fileIdOrResourceName}': ${resourceName}`);
     }
-    
+
     // Validate that resource name has the numeric ID at the end (not a UUID)
     const lastSegment = resourceName.split('/').pop();
     if (lastSegment?.includes('-')) {
       console.warn(`⚠️  WARNING: File ID appears to be a UUID '${lastSegment}', but Vertex AI expects numeric IDs`);
     }
-    
+
     // Use the same URL pattern as upload: hardcode the endpoint URL
     const deleteUrl = `https://${this.config.location}-aiplatform.googleapis.com/v1beta1/${resourceName}`;
-    
+
     console.log(`🗑️  RAG Delete URL: ${deleteUrl}`);
-    
+
     try {
       // Use axios directly like uploadFile does, passing auth headers explicitly
       const response = await axios.delete(deleteUrl, {
@@ -352,7 +355,7 @@ Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
           'Content-Type': 'application/json',
         },
       });
-      
+
       console.log(`✅ RAG Delete Response: Status ${response.status} ${response.statusText}`);
       return true;
     } catch (error: any) {
@@ -384,7 +387,7 @@ Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
   getConfig() {
     return { ...this.config };
   }
-  
+
   // Clear local cache (useful for testing)
   clearLocalCache(): void {
     this.localAnswerCache.clear();
