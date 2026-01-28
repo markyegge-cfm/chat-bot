@@ -1,12 +1,10 @@
 class Escalations {
-   // State management for pagination
-   static state = {
-      currentPage: 1,
-      limit: 8,
-      total: 0,
-      totalPages: 1,
-      isLoading: false
-   };
+   static allEscalations = []; // Store all unfiltered documents
+   static filteredData = [];
+   static currentPage = 1;
+   static itemsPerPage = 8;
+   static currentStatusFilter = 'all';
+   static currentSearchTerm = '';
 
    static render() {
       return `
@@ -15,12 +13,12 @@ class Escalations {
         <div class="flex justify-between items-center mb-6">
            <div class="flex items-center gap-3">
              <h1 class="text-[24px] font-bold text-[#1E293B]">Escalations Issues</h1>
-             <span class="bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-md text-[13px] font-medium" id="escalations-count">...</span>
+             <span class="bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-md text-[13px] font-medium" id="escalations-count">0</span>
            </div>
         </div>
 
         <!-- Controls -->
-        <div class="flex justify-between items-center gap-4 mb-6">
+        <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 mb-6">
            <!-- Search Input -->
            <div class="relative flex-1">
               <svg class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -30,21 +28,38 @@ class Escalations {
               <input type="text" placeholder="Search by Email, or Key words" class="w-full pl-11 pr-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-[#E5A000] focus:ring-1 focus:ring-[#E5A000] transition-all bg-white text-[14px] placeholder-gray-400" id="escalations-search">
            </div>
            
-           <!-- Sort Button -->
-           <button class="flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 text-[14px] font-medium transition-colors whitespace-nowrap">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                 <line x1="21" y1="10" x2="3" y2="10"></line>
-                 <line x1="21" y1="6" x2="3" y2="6"></line>
-                 <line x1="21" y1="14" x2="3" y2="14"></line>
-                 <line x1="21" y1="18" x2="3" y2="18"></line>
-              </svg>
-              Sort by
-           </button>
+           <!-- Sort/Filter Button -->
+           <div class="relative" id="esc-filter-container">
+              <button id="esc-filter-btn" class="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 text-[14px] font-medium transition-colors whitespace-nowrap">
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="21" y1="10" x2="3" y2="10"></line>
+                    <line x1="21" y1="6" x2="3" y2="6"></line>
+                    <line x1="21" y1="14" x2="3" y2="14"></line>
+                    <line x1="21" y1="18" x2="3" y2="18"></line>
+                 </svg>
+                 <span>Sort: <span id="esc-filter-label" class="font-bold text-[#E5A000]">All</span></span>
+              </button>
+              <!-- Dropdown Menu -->
+              <div id="esc-filter-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-50 overflow-hidden">
+                 <button class="w-full px-4 py-2.5 text-left text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors" data-status="all">
+                    <span class="w-2 h-2 rounded-full bg-gray-300"></span>
+                    All Statuses
+                 </button>
+                 <button class="w-full px-4 py-2.5 text-left text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors" data-status="open">
+                    <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+                    Open Issues
+                 </button>
+                 <button class="w-full px-4 py-2.5 text-left text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors" data-status="resolved">
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    Resolved
+                 </button>
+              </div>
+           </div>
         </div>
 
-        <!-- Table -->
-        <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden mb-6 shadow-sm">
-           <table class="w-full">
+        <!-- Table Container (Horizontal Scroll for Mobile) -->
+        <div class="bg-white border border-gray-200 rounded-2xl overflow-x-auto mb-6 shadow-sm min-h-[400px]">
+           <table class="w-full min-w-[800px]">
               <thead class="bg-gray-50/50 border-b border-gray-100">
                  <tr>
                     <th class="w-16 p-5 text-center">
@@ -80,15 +95,14 @@ class Escalations {
            </div>
            
            <div class="flex items-center gap-4">
-              <span id="escalations-page-info2">Page 1 of 1</span>
               <div class="flex items-center gap-1">
                  <!-- First Page -->
                  <button id="esc-first-btn" class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" disabled>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
                  </button>
                  <!-- Previous Page -->
                  <button id="esc-prev-btn" class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" disabled>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
                  </button>
                  <!-- Next Page -->
                  <button id="esc-next-btn" class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600 transition-colors">
@@ -158,177 +172,160 @@ class Escalations {
     `).join('');
    }
 
-   static getReasonBadgeClass(reason) {
-      if (reason === 'Low confidence') {
-         return 'bg-orange-50 text-orange-700';
-      }
-      return 'bg-gray-100 text-gray-700';
-   }
-
-   static getReasonColor(reason) {
-      if (reason === 'Low confidence') {
-         return '#f39c12';
-      }
-      return '#cbd5e1';
-   }
-
-   static escapeHtml(text) {
-      if (!text) return '';
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-   }
-
-   static formatDate(dateStr) {
-      if (!dateStr) return '-';
-      try {
-         const date = new Date(dateStr);
-         return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-         });
-      } catch {
-         return dateStr;
-      }
-   }
-
-   static async loadEscalations(page = 1) {
-      this.state.isLoading = true;
-      this.state.currentPage = page;
-
+   static async loadEscalations() {
       const tbody = document.getElementById('escalations-table-body');
-      if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-400 text-sm">Loading...</td></tr>';
-
       try {
-         const api = new APIService();
-         const result = await api.getEscalations(this.state.currentPage, this.state.limit);
-
-         const escalations = result.escalations || [];
-         this.state.total = result.total || 0;
-         this.state.totalPages = result.totalPages || Math.ceil(this.state.total / this.state.limit) || 1;
-
-         // Update UI
-         const countEl = document.getElementById('escalations-count');
-         if (countEl) countEl.textContent = this.state.total;
-
-         if (tbody) tbody.innerHTML = this.renderRows(escalations);
-
-         this.updatePaginationUI();
-
+         const data = await window.apiService.getAllEscalations();
+         this.allEscalations = Array.isArray(data) ? data : [];
+         this.applyFilters();
       } catch (error) {
          console.error('Failed to load escalations:', error);
-         if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-red-500 text-sm">Failed to load escalations. Is the API running?</td></tr>';
-      } finally {
-         this.state.isLoading = false;
+         if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-red-500 text-sm">Failed to load escalations.</td></tr>';
       }
    }
 
-   static updatePaginationUI() {
-      const { currentPage, totalPages } = this.state;
+   static applyFilters() {
+      const searchInput = document.getElementById('escalations-search');
+      const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
-      // Update text
-      const info1 = document.getElementById('escalations-page-info');
-      const info2 = document.getElementById('escalations-page-info2');
-      if (info1) info1.textContent = `Page ${currentPage} of ${totalPages}`;
-      if (info2) info2.textContent = `Page ${currentPage} of ${totalPages}`;
+      let filtered = [...this.allEscalations];
 
-      // Update buttons state
+      // Status Filter
+      if (this.currentStatusFilter && this.currentStatusFilter !== 'all') {
+         filtered = filtered.filter(item => item.status === this.currentStatusFilter);
+      }
+
+      // Search Filter
+      if (searchTerm) {
+         filtered = filtered.filter(item =>
+            (item.user && item.user.toLowerCase().includes(searchTerm)) ||
+            (item.question && item.question.toLowerCase().includes(searchTerm)) ||
+            (item.reason && item.reason.toLowerCase().includes(searchTerm))
+         );
+      }
+
+      this.filteredData = filtered;
+      this.currentPage = 1;
+      this.updateTable();
+   }
+
+   static updateTable() {
+      const tbody = document.getElementById('escalations-table-body');
+      const countEl = document.getElementById('escalations-count');
+      const pageInfo = document.getElementById('escalations-page-info');
+
+      if (!tbody) return;
+
+      const totalItems = this.filteredData.length;
+      const totalPages = Math.ceil(totalItems / this.itemsPerPage) || 1;
+
+      if (this.currentPage > totalPages) this.currentPage = totalPages;
+
+      const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+      const endIndex = startIndex + this.itemsPerPage;
+      const paginatedData = this.filteredData.slice(startIndex, endIndex);
+
+      if (countEl) countEl.textContent = totalItems;
+      if (pageInfo) pageInfo.textContent = `Page ${this.currentPage} of ${totalPages}`;
+
+      tbody.innerHTML = this.renderRows(paginatedData);
+      this.updatePaginationButtons(totalPages);
+   }
+
+   static updatePaginationButtons(totalPages) {
       const firstBtn = document.getElementById('esc-first-btn');
       const prevBtn = document.getElementById('esc-prev-btn');
       const nextBtn = document.getElementById('esc-next-btn');
       const lastBtn = document.getElementById('esc-last-btn');
 
-      if (firstBtn) {
-         firstBtn.disabled = currentPage <= 1;
-         firstBtn.classList.toggle('text-gray-400', currentPage <= 1);
-         firstBtn.classList.toggle('text-gray-600', currentPage > 1);
-      }
-
-      if (prevBtn) {
-         prevBtn.disabled = currentPage <= 1;
-         prevBtn.classList.toggle('text-gray-400', currentPage <= 1);
-         prevBtn.classList.toggle('text-gray-600', currentPage > 1);
-      }
-
-      if (nextBtn) {
-         nextBtn.disabled = currentPage >= totalPages;
-         nextBtn.classList.toggle('text-gray-400', currentPage >= totalPages);
-         nextBtn.classList.toggle('text-gray-600', currentPage < totalPages);
-      }
-
-      if (lastBtn) {
-         lastBtn.disabled = currentPage >= totalPages;
-         lastBtn.classList.toggle('text-gray-400', currentPage >= totalPages);
-         lastBtn.classList.toggle('text-gray-600', currentPage < totalPages);
-      }
+      if (firstBtn) firstBtn.disabled = this.currentPage <= 1;
+      if (prevBtn) prevBtn.disabled = this.currentPage <= 1;
+      if (nextBtn) nextBtn.disabled = this.currentPage >= totalPages;
+      if (lastBtn) lastBtn.disabled = this.currentPage >= totalPages;
    }
 
    static afterRender() {
-      // Initial Load
-      this.loadEscalations(1);
+      this.loadEscalations();
 
-      // Search functionality
+      // Search
       const searchInput = document.getElementById('escalations-search');
-      let searchTimeout;
       if (searchInput) {
-         searchInput.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-               const query = e.target.value.toLowerCase();
-               console.log('Searching for:', query);
-               // Future: pass query to loadEscalations
-            }, 500);
+         searchInput.addEventListener('input', () => this.applyFilters());
+      }
+
+      // Filter Toggle
+      const filterBtn = document.getElementById('esc-filter-btn');
+      const filterMenu = document.getElementById('esc-filter-menu');
+      const filterLabel = document.getElementById('esc-filter-label');
+
+      if (filterBtn && filterMenu) {
+         filterBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            filterMenu.classList.toggle('hidden');
          });
+
+         filterMenu.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+               const status = btn.dataset.status;
+               this.currentStatusFilter = status;
+               if (filterLabel) {
+                  filterLabel.textContent = status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1);
+               }
+               filterMenu.classList.add('hidden');
+               this.applyFilters();
+            });
+         });
+
+         document.addEventListener('click', () => filterMenu.classList.add('hidden'));
       }
 
       // Limit Select
       const limitSelect = document.getElementById('escalations-limit-select');
       if (limitSelect) {
-         limitSelect.value = this.state.limit;
          limitSelect.addEventListener('change', (e) => {
-            this.state.limit = parseInt(e.target.value);
-            this.loadEscalations(1);
+            this.itemsPerPage = parseInt(e.target.value);
+            this.currentPage = 1;
+            this.updateTable();
          });
       }
 
-      // Pagination Buttons
+      // Pagination
       document.getElementById('esc-first-btn')?.addEventListener('click', () => {
-         if (this.state.currentPage > 1) this.loadEscalations(1);
+         this.currentPage = 1;
+         this.updateTable();
       });
-
       document.getElementById('esc-prev-btn')?.addEventListener('click', () => {
-         if (this.state.currentPage > 1) this.loadEscalations(this.state.currentPage - 1);
+         if (this.currentPage > 1) {
+            this.currentPage--;
+            this.updateTable();
+         }
       });
-
       document.getElementById('esc-next-btn')?.addEventListener('click', () => {
-         if (this.state.currentPage < this.state.totalPages) this.loadEscalations(this.state.currentPage + 1);
+         const totalPages = Math.ceil(this.filteredData.length / this.itemsPerPage);
+         if (this.currentPage < totalPages) {
+            this.currentPage++;
+            this.updateTable();
+         }
       });
-
       document.getElementById('esc-last-btn')?.addEventListener('click', () => {
-         if (this.state.currentPage < this.state.totalPages) this.loadEscalations(this.state.totalPages);
+         this.currentPage = Math.ceil(this.filteredData.length / this.itemsPerPage) || 1;
+         this.updateTable();
       });
 
-      // Table Actions Delegation
+      // Actions
       const tbody = document.getElementById('escalations-table-body');
       if (tbody) {
          tbody.addEventListener('click', async (e) => {
             const btn = e.target.closest('button[data-action]');
             if (!btn) return;
-
-            const action = btn.dataset.action;
-            const id = btn.dataset.id;
+            const { action, id, status } = btn.dataset;
 
             if (action === 'delete') {
-               if (confirm('Are you sure you want to delete this escalation?')) {
+               if (confirm('Delete this escalation?')) {
                   await this.deleteEscalation(id);
                }
             } else if (action === 'toggle-status') {
-               const currentStatus = btn.dataset.status;
-               const newStatus = currentStatus === 'open' ? 'resolved' : 'open';
-               await this.toggleStatus(id, newStatus);
+               await this.toggleStatus(id, status === 'open' ? 'resolved' : 'open');
             }
          });
       }
@@ -337,18 +334,9 @@ class Escalations {
    static async deleteEscalation(id) {
       try {
          const res = await fetch(`/api/escalations/${id}`, { method: 'DELETE' });
-         const data = await res.json();
-
-         if (data.success) {
-            // Reload current page
-            this.loadEscalations(this.state.currentPage);
-         } else {
-            alert('Failed to delete: ' + data.error);
-         }
-      } catch (err) {
-         console.error('Delete error:', err);
-         alert('Error deleting escalation');
-      }
+         const result = await res.json();
+         if (result.success) this.loadEscalations();
+      } catch (err) { console.error(err); }
    }
 
    static async toggleStatus(id, newStatus) {
@@ -358,16 +346,28 @@ class Escalations {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: newStatus })
          });
-         const data = await res.json();
+         const result = await res.json();
+         if (result.success) this.loadEscalations();
+      } catch (err) { console.error(err); }
+   }
 
-         if (data.success) {
-            this.loadEscalations(this.state.currentPage);
-         } else {
-            alert('Failed to update status: ' + data.error);
-         }
-      } catch (err) {
-         console.error('Status update error:', err);
-         alert('Error updating status');
-      }
+   static getReasonBadgeClass(reason) {
+      return reason === 'Low confidence' ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-700';
+   }
+   static getReasonColor(reason) {
+      return reason === 'Low confidence' ? '#f39c12' : '#cbd5e1';
+   }
+   static escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text || '';
+      return div.innerHTML;
+   }
+   static formatDate(dateStr) {
+      if (!dateStr) return '-';
+      try {
+         return new Date(dateStr).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+         });
+      } catch { return dateStr; }
    }
 }

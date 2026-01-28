@@ -6,8 +6,8 @@ class APIService {
 
   getApiBaseUrl() {
     const { protocol, hostname, port } = window.location;
-    return (hostname === 'localhost' || hostname === '127.0.0.1') 
-      ? `${protocol}//localhost:3000` 
+    return (hostname === 'localhost' || hostname === '127.0.0.1')
+      ? `${protocol}//localhost:3000`
       : `${protocol}//${hostname}${port ? `:${port}` : ''}`;
   }
 
@@ -179,17 +179,29 @@ class APIService {
   /**
    * Get all escalations with pagination
    */
-  async getEscalations(page = 1, limit = 8) {
+  async getEscalations(page = 1, limit = 8, status = '', search = '') {
     try {
-      const response = await fetch(
-        `${this.baseUrl}/api/escalations?page=${page}&limit=${limit}`,
-        { headers: this.getHeaders() }
-      );
+      let url = `${this.baseUrl}/api/escalations?page=${page}&limit=${limit}`;
+      if (status) url += `&status=${status}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+
+      const response = await fetch(url, { headers: this.getHeaders() });
       const result = await response.json();
       return result.success ? result : { escalations: [], total: 0, totalPages: 0 };
     } catch (e) {
       console.error("API Error:", e);
       return { escalations: [], total: 0, totalPages: 0 };
+    }
+  }
+
+  async getAllEscalations() {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/escalations/all`, { headers: this.getHeaders() });
+      const result = await response.json();
+      return result.success ? result.data : [];
+    } catch (e) {
+      console.error("API Error:", e);
+      return [];
     }
   }
 

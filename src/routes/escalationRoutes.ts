@@ -11,6 +11,9 @@ const router = express.Router();
 // Get all escalations (paginated)
 router.get('/escalations', EscalationController.getEscalations);
 
+// Get all escalations (unpaginated for client filtering)
+router.get('/escalations/all', EscalationController.getAllEscalations);
+
 // Create a new escalation
 router.post('/escalations', EscalationController.createEscalation);
 

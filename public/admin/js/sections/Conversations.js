@@ -5,7 +5,21 @@ class Conversations {
         <!-- Messages Sidebar (Left) -->
         <div class="w-[380px] flex flex-col border-r border-gray-100 flex-shrink-0 responsive-conversations-list">
           <div class="p-8 pb-4">
-            <h2 class="text-[20px] font-bold text-gray-900 tracking-tight">Messages</h2>
+            <h2 class="text-[20px] font-bold text-gray-900 tracking-tight mb-4">Messages</h2>
+            
+            <!-- Filter Controls -->
+            <div class="flex flex-col gap-3 mb-2">
+               <div class="relative">
+                  <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                     <circle cx="11" cy="11" r="8"></circle>
+                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input type="text" id="conv-search" placeholder="Search sessions..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#E5A000] transition-all">
+               </div>
+               <div class="relative">
+                  <input type="date" id="conv-date-filter" class="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#E5A000] transition-all text-gray-600">
+               </div>
+            </div>
           </div>
           
           <div class="flex-1 overflow-y-auto pl-4 space-y-2 pr-0" id="conversations-list">
@@ -17,7 +31,7 @@ class Conversations {
         <!-- Chat Area (Right) -->
             <div class="flex-1 flex flex-col min-w-0 bg-white responsive-conversation-chat">
                <!-- Mobile header (Back button + Title) -->
-               <div class="conversation-mobile-header" style="display:none; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #E2E8F0;">
+               <div class="conversation-mobile-header" style="display:none; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #E2E8F0; background: #fff; position: sticky; top: 0; z-index: 20;">
                   <button class="back-to-list-btn" aria-label="Back to list" style="background:transparent;border:none;font-size:18px;cursor:pointer;padding:6px;">&larr;</button>
                   <h3 class="conversation-title" style="margin:0;font-size:16px;font-weight:600;">Select a conversation</h3>
                   <div style="width:32px;"></div>
@@ -36,36 +50,53 @@ class Conversations {
                </div>
 
                <!-- Bottom Action -->
-               <div class="join-conversation-bar p-8 border-t border-gray-100">
+               <div id="join-bar-container" class="join-conversation-bar p-8 border-t border-gray-100 hidden">
                    <button class="w-full bg-[#E5A000] hover:bg-[#D49000] text-white font-bold py-4 rounded-xl shadow-sm transition-all text-[15px]" id="join-conversation-btn" style="display: none;">
                       Join Conversation
                    </button>
                </div>
         </div>
+        
+        <style>
+           .conversation-item.active {
+               background-color: #f3f4f6 !important;
+               border-left: 4px solid #E5A000 !important;
+           }
+           @media (max-width: 768px) {
+              .responsive-conversation-chat {
+                 max-height: 100vh !important;
+                 height: calc(100vh - 70px) !important;
+                 position: fixed !important;
+                 top: 70px !important;
+                 left: 0 !important;
+                 right: 0 !important;
+                 bottom: 0 !important;
+                 z-index: 50 !important;
+              }
+              .responsive-conversations-list {
+                 max-height: none !important;
+              }
+           }
+        </style>
       </div>
     `;
    }
 
    static afterRender() {
+      this.allConversations = [];
       this.loadConversations();
-      // Listeners will be attached after conversations load
+      this.setupFilterListeners();
    }
 
    static async loadConversations() {
       try {
          console.log('📊 Fetching conversations from API...');
          const data = await window.apiService.adminGetConversations(1, 50);
-         console.log('📊 API Response:', data);
-         
-         if (data && data.success && data.conversations) {
-            console.log('✅ Conversations loaded:', data.conversations.length);
-            this.renderConversationList(data.conversations);
-         } else if (data && data.conversations && Array.isArray(data.conversations)) {
-            // Handle case where success flag might not be present
-            console.log('✅ Conversations loaded (no success flag):', data.conversations.length);
-            this.renderConversationList(data.conversations);
+
+         if (data && (data.success || Array.isArray(data.conversations))) {
+            this.allConversations = data.conversations || [];
+            this.renderConversationList(this.allConversations);
          } else {
-            console.warn('⚠️ Unexpected response format:', data);
             const list = document.getElementById('conversations-list');
             if (list) {
                list.innerHTML = '<div class="p-4 text-center text-gray-400 text-sm">No conversations found</div>';
@@ -73,7 +104,6 @@ class Conversations {
          }
       } catch (error) {
          console.error('❌ Failed to load conversations:', error);
-         // Show error state
          const list = document.getElementById('conversations-list');
          if (list) {
             list.innerHTML = '<div class="p-4 text-center text-red-500 text-sm">Failed to load conversations</div>';
@@ -81,36 +111,74 @@ class Conversations {
       }
    }
 
+   static setupFilterListeners() {
+      const searchInput = document.getElementById('conv-search');
+      const dateInput = document.getElementById('conv-date-filter');
+
+      if (searchInput) {
+         searchInput.addEventListener('input', () => this.filterConversations());
+      }
+      if (dateInput) {
+         dateInput.addEventListener('change', () => this.filterConversations());
+      }
+   }
+
+   static filterConversations() {
+      const searchInput = document.getElementById('conv-search');
+      const dateInput = document.getElementById('conv-date-filter');
+
+      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+      const dateTerm = dateInput ? dateInput.value : '';
+
+      const filtered = this.allConversations.filter(conv => {
+         const matchesSearch = conv.id.toLowerCase().includes(searchTerm) ||
+            (conv.lastMessage && conv.lastMessage.toLowerCase().includes(searchTerm));
+
+         let matchesDate = true;
+         if (dateTerm) {
+            let startTime;
+            if (conv.startedAt && typeof conv.startedAt === 'object' && conv.startedAt._seconds) {
+               startTime = new Date(conv.startedAt._seconds * 1000);
+            } else if (conv.startedAt && typeof conv.startedAt === 'string') {
+               startTime = new Date(conv.startedAt);
+            } else {
+               startTime = new Date(conv.startedAt || Date.now());
+            }
+            const convDate = startTime.toISOString().split('T')[0];
+            matchesDate = convDate === dateTerm;
+         }
+
+         return matchesSearch && matchesDate;
+      });
+
+      this.renderConversationList(filtered);
+   }
+
    static renderConversationList(conversations) {
       const container = document.getElementById('conversations-list');
       if (!container) return;
 
       if (conversations.length === 0) {
-         container.innerHTML = '<div class="p-4 text-center text-gray-400 text-sm">No conversations yet</div>';
+         container.innerHTML = '<div class="p-4 text-center text-gray-400 text-sm">No sessions matching filters</div>';
          return;
       }
 
       const html = conversations.map((conv, idx) => {
-         // Handle Firestore timestamp objects.
          let startTime;
          if (conv.startedAt && typeof conv.startedAt === 'object' && conv.startedAt._seconds) {
-            // Firestore Timestamp object
             startTime = new Date(conv.startedAt._seconds * 1000);
          } else if (conv.startedAt && typeof conv.startedAt === 'string') {
-            // ISO string
             startTime = new Date(conv.startedAt);
          } else {
             startTime = new Date();
          }
-         
+
          const timeStr = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
          const initials = conv.userId ? conv.userId.substring(0, 2).toUpperCase() : '#' + (idx + 1);
-         const isActive = idx === 0 ? 'active' : '';
-         const bgClass = isActive ? 'bg-gray-100' : 'hover:bg-gray-50';
          const statusIndicator = conv.status === 'active' ? 'bg-[#27ae60]' : conv.status === 'escalated' ? 'bg-[#E5A000]' : 'bg-gray-300';
 
          return `
-            <div class="group flex items-start gap-4 p-4 rounded-l-2xl rounded-r-none ${bgClass} cursor-pointer border-transparent transition-all relative overflow-hidden mr-0 conversation-item ${isActive}" data-conversation-id="${conv.id}">
+            <div class="group flex items-start gap-4 p-4 rounded-l-2xl rounded-r-none hover:bg-gray-50 cursor-pointer border-transparent transition-all relative overflow-hidden mr-0 conversation-item" data-conversation-id="${conv.id}">
                <div class="relative">
                  <div class="w-10 h-10 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
                    ${initials}
@@ -122,7 +190,7 @@ class Conversations {
                    <h3 class="text-[14px] font-bold text-gray-900 font-mono">${conv.id.substring(0, 8)}</h3>
                    <span class="text-[12px] text-gray-500 font-medium">${timeStr}</span>
                  </div>
-                 <p class="text-[13px] text-gray-500 truncate leading-relaxed">${conv.lastMessage || (conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1].content : 'No messages')}</p>
+                 <p class="text-[13px] text-gray-500 truncate leading-relaxed">${this.escapeHtml(conv.lastMessage || (conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1].content : 'No messages'))}</p>
                </div>
             </div>
          `;
@@ -137,6 +205,7 @@ class Conversations {
       const conversationList = document.querySelector('.responsive-conversations-list');
       const conversationChat = document.querySelector('.responsive-conversation-chat');
       const mobileHeader = document.querySelector('.conversation-mobile-header');
+      const sidebar = document.querySelector('.sidebar');
       const backBtn = mobileHeader && mobileHeader.querySelector('.back-to-list-btn');
 
       // Helper to detect mobile at action time
@@ -163,6 +232,7 @@ class Conversations {
                conversationList.classList.add('hidden');
                conversationChat.classList.add('show');
                if (mobileHeader) mobileHeader.style.display = 'flex';
+               if (sidebar) sidebar.style.display = 'none';
             }
          });
       });
@@ -173,6 +243,7 @@ class Conversations {
                conversationList.classList.remove('hidden');
                conversationChat.classList.remove('show');
                if (mobileHeader) mobileHeader.style.display = 'none';
+               if (sidebar) sidebar.style.display = 'flex';
             }
          });
       }
@@ -183,13 +254,14 @@ class Conversations {
             conversationList.classList.remove('hidden');
             conversationChat.classList.remove('show');
             if (mobileHeader) mobileHeader.style.display = 'none';
+            if (sidebar) sidebar.style.display = 'flex';
          }
       });
    }
 
    static async loadConversationMessages(conversationId) {
       const messagesContainer = document.getElementById('conversation-messages');
-      
+
       try {
          // Show loading state
          messagesContainer.innerHTML = `
@@ -203,7 +275,7 @@ class Conversations {
 
          // Fetch conversation messages from APi
          const messages = await window.apiService.getConversationMessages(conversationId);
-         
+
          if (!messages || messages.length === 0) {
             messagesContainer.innerHTML = `
                <div class="flex items-center justify-center h-full">
@@ -240,13 +312,13 @@ class Conversations {
 
    static renderMessages(messages) {
       const messagesContainer = document.getElementById('conversation-messages');
-      
+
       const html = messages.map(msg => {
-         const timestamp = new Date(msg.timestamp).toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
+         const timestamp = new Date(msg.timestamp).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
          });
-         
+
          if (msg.sender === 'user') {
             return `
                <div class="flex justify-end mb-8">

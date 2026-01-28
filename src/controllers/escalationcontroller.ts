@@ -11,8 +11,10 @@ export class EscalationController {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 8;
+      const status = req.query.status as string;
+      const search = req.query.search as string;
 
-      const result = await firebaseService.getEscalations(page, limit);
+      const result = await firebaseService.getEscalations(page, limit, status, search);
 
       res.json({
         success: true,
@@ -24,6 +26,20 @@ export class EscalationController {
       });
     } catch (error) {
       console.error('Error fetching escalations:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch escalations' });
+    }
+  }
+
+  /**
+   * GET /api/escalations/all
+   * Retrieves all escalation tickets for client-side processing
+   */
+  static async getAllEscalations(req: Request, res: Response): Promise<void> {
+    try {
+      const escalations = await firebaseService.getAllEscalations();
+      res.json({ success: true, data: escalations });
+    } catch (error) {
+      console.error('Error fetching all escalations:', error);
       res.status(500).json({ success: false, error: 'Failed to fetch escalations' });
     }
   }
