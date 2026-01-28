@@ -48,18 +48,6 @@ const mapFileToUI = (file: any) => ({
  */
 export const getAllKnowledge = async (req: Request, res: Response): Promise<void> => {
   try {
-    if (!firebaseService.isInitialized()) {
-      // Return empty list if Firebase not yet initialized instead of error
-      console.log('⚠️  Firebase service not initialized, returning empty knowledge list');
-      (res as any).json({
-        success: true,
-        data: [],
-        total: 0,
-        warning: 'Firebase not yet initialized',
-      });
-      return;
-    }
-
     const knowledgeItems = await firebaseService.getAllKnowledge();
 
     (res as any).json({
@@ -266,6 +254,16 @@ export const deleteKnowledge = async (req: Request, res: Response): Promise<void
       console.log(`🗑️  Deleting from Firebase: ${id}`);
       await firebaseService.deleteKnowledge(id);
       console.log(`✅ Deleted from Firebase`);
+
+      // Delete PDF file from Firebase Storage if it's a PDF
+      if (knowledge.type === 'pdf') {
+        try {
+          await firebaseService.deletePdfFile(id);
+          console.log(`✅ Deleted PDF file from Storage`);
+        } catch (error: any) {
+          console.warn('⚠️  Could not delete PDF file:', error.message);
+        }
+      }
     } catch (error: any) {
       console.error('❌ Could not delete from Firebase:', error.message);
       (res as any).status(500).json({ success: false, error: error.message });
@@ -359,6 +357,89 @@ export const uploadCSV = async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error: any) {
     console.error('❌ CSV upload error:', error);
+    (res as any).status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
+ * POST /api/knowledge/upload/pdf
+ * Upload a PDF file - stores it as-is without requiring Q&A format
+ * Saves to both Vertex AI RAG and Firebase Firestore + Storage
+ */
+export const uploadPDF = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { filename, content, title, description } = req.body;
+
+    if (!filename || !content) {
+      (res as any).status(400).json({ success: false, error: 'Filename and content are required' });
+      return;
+    }
+
+    ensureTempDir();
+
+    try {
+      // Create temporary file with base64 content
+      const tempFile = path.join(RAG_TEMP_DIR, `pdf_${Date.now()}_${filename}`);
+      const buffer = Buffer.from(content, 'base64');
+      fs.writeFileSync(tempFile, buffer);
+
+      // 1. Save metadata to Firebase Firestore first (to get ID)
+      const knowledge = await firebaseService.saveKnowledge({
+        ragFileId: '', // Will be populated by background task
+        question: title || filename,
+        answer: description || `PDF: ${filename}`,
+        type: 'pdf',
+        status: 'PROCESSING',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      // 2. Upload PDF to Firebase Storage
+      let fileUrl = '';
+      try {
+        fileUrl = await firebaseService.uploadPdfFile(buffer, filename, knowledge.id);
+        console.log(`✅ PDF uploaded to Firebase Storage: ${fileUrl}`);
+      } catch (storageError: any) {
+        console.error('❌ Failed to upload to Firebase Storage:', storageError.message);
+        console.error('Storage error details:', storageError);
+      }
+
+      // 3. Update knowledge metadata with file URL
+      console.log(`Updating knowledge ${knowledge.id} with fileUrl: ${fileUrl}`);
+      if (fileUrl) {
+        await firebaseService.updateKnowledge(knowledge.id, {
+          fileUrl,
+        });
+        console.log(`✅ Knowledge updated with fileUrl`);
+      } else {
+        console.log(`⚠️  No fileUrl to update - PDF upload may have failed`);
+      }
+
+      // 4. Queue RAG upload in background
+      backgroundTaskService.queueTask('UPLOAD_RAG', knowledge.id, {
+        tempFilePath: tempFile,
+        displayName: title || filename.substring(0, 100),
+        description: description || `PDF: ${filename}`,
+      });
+
+      (res as any).status(201).json({
+        success: true,
+        message: 'PDF uploaded successfully',
+        data: {
+          id: knowledge.id,
+          title: knowledge.question,
+          filename,
+          type: 'pdf',
+          fileUrl,
+          createdAt: knowledge.createdAt,
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ PDF upload error:', error);
+      (res as any).status(500).json({ success: false, error: error.message });
+    }
+  } catch (error: any) {
+    console.error('❌ PDF upload error:', error);
     (res as any).status(500).json({ success: false, error: error.message });
   }
 };

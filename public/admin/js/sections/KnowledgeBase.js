@@ -3,6 +3,7 @@ class KnowledgeBase {
    static currentData = [];
    static currentPage = 1;
    static itemsPerPage = 8;
+   static currentSortType = 'all'; // Default sort/filter type
 
    static render() {
       return `
@@ -28,17 +29,38 @@ class KnowledgeBase {
               </svg>
               <input type="text" placeholder="Search by Question, or Key words" class="w-full pl-11 pr-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-[#E5A000] focus:ring-1 focus:ring-[#E5A000] transition-all bg-white text-[14px] placeholder-gray-400" id="kb-search">
            </div>
-           
-           <button class="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 text-[14px] font-medium transition-colors whitespace-nowrap">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                 <line x1="21" y1="10" x2="3" y2="10"></line>
-                 <line x1="21" y1="6" x2="3" y2="6"></line>
-                 <line x1="21" y1="14" x2="3" y2="14"></line>
-                 <line x1="21" y1="18" x2="3" y2="18"></line>
-              </svg>
-              Sort by
-           </button>
-        </div>
+            <div class="relative" id="kb-sort-container">
+               <button id="kb-sort-btn" class="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 text-[14px] font-medium transition-colors whitespace-nowrap">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                     <line x1="21" y1="10" x2="3" y2="10"></line>
+                     <line x1="21" y1="6" x2="3" y2="6"></line>
+                     <line x1="21" y1="14" x2="3" y2="14"></line>
+                     <line x1="21" y1="18" x2="3" y2="18"></line>
+                  </svg>
+                  <span>Filter: <span id="kb-sort-label" class="font-bold text-[#E5A000]">All</span></span>
+               </button>
+               
+               <!-- Sort Dropdown Menu -->
+               <div id="kb-sort-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-50 overflow-hidden">
+                  <button class="w-full px-4 py-2.5 text-left text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors active-filter" data-sort="all">
+                     <span class="w-2 h-2 rounded-full bg-gray-300"></span>
+                     All Types
+                  </button>
+                  <button class="w-full px-4 py-2.5 text-left text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors" data-sort="pdf">
+                     <span class="w-2 h-2 rounded-full bg-[#8B5CF6]"></span>
+                     PDF Files
+                  </button>
+                  <button class="w-full px-4 py-2.5 text-left text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors" data-sort="csv">
+                     <span class="w-2 h-2 rounded-full bg-[#10B981]"></span>
+                     CSV Files
+                  </button>
+                  <button class="w-full px-4 py-2.5 text-left text-[13px] text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors" data-sort="manual">
+                     <span class="w-2 h-2 rounded-full bg-[#3B82F6]"></span>
+                     Manual Entries
+                  </button>
+               </div>
+            </div>
+         </div>
 
         <div class="bg-white border border-gray-200 rounded-2xl overflow-x-auto mb-6 shadow-sm pb-32 min-h-[400px]">
            <table class="w-full min-w-[800px]">
@@ -188,23 +210,22 @@ class KnowledgeBase {
       try {
          console.log('Loading knowledge items...');
          const response = await fetch('/api/knowledge');
-         
+
          if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
          }
-         
+
          const result = await response.json();
-         console.log('Knowledge response:', result);
-         
+
          if (result.success) {
             this.allDocuments = result.data || [];
             this.currentData = this.allDocuments;
-            
+
             // Clear search when reloading
             const searchInput = document.getElementById('kb-search');
             if (searchInput) searchInput.value = '';
-            
-            this.updateTable();
+
+            this.applyFilters();
          } else {
             throw new Error(result.error || 'Failed to load knowledge items');
          }
@@ -270,24 +291,48 @@ class KnowledgeBase {
       const existingMenu = document.querySelector('.kb-context-menu');
       if (existingMenu) existingMenu.remove();
 
+      // Find the item to check its type
+      const item = this.allDocuments.find(k => String(k.id) === String(itemId));
+      const isPdf = item && item.type === 'pdf';
+
       const menu = document.createElement('div');
       menu.className = 'kb-context-menu absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-50';
-      menu.innerHTML = `
-         <button class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2" data-action="edit">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-            </svg>
-            Edit
-         </button>
-         <button class="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2" data-action="delete">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-               <polyline points="3 6 5 6 21 6"></polyline>
-               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-            Delete
-         </button>
-      `;
+
+      // Build menu HTML based on type
+      let menuHtml = '';
+
+      if (isPdf) {
+         // For PDFs: show only delete (no edit or download)
+         menuHtml = `
+            <button class="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2" data-action="delete">
+               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+               </svg>
+               Delete
+            </button>
+         `;
+      } else {
+         // For Q&A: show edit and delete
+         menuHtml = `
+            <button class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2" data-action="edit">
+               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+               </svg>
+               Edit
+            </button>
+            <button class="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2" data-action="delete">
+               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+               </svg>
+               Delete
+            </button>
+         `;
+      }
+
+      menu.innerHTML = menuHtml;
 
       button.parentElement.appendChild(menu);
 
@@ -327,9 +372,8 @@ class KnowledgeBase {
 
    static showToast(message, type = 'info') {
       const toast = document.createElement('div');
-      toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-[200] transition-all duration-300 transform translate-y-[-20px] opacity-0 ${
-         type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'
-      }`;
+      toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-[200] transition-all duration-300 transform translate-y-[-20px] opacity-0 ${type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+         }`;
       toast.textContent = message;
       document.body.appendChild(toast);
 
@@ -349,6 +393,7 @@ class KnowledgeBase {
       this.loadDocuments();
       this.setupPaginationListeners();
       this.setupSearchListener();
+      this.setupSortListener();
       this.injectModal();
    }
 
@@ -410,21 +455,76 @@ class KnowledgeBase {
       searchInput.addEventListener('input', (e) => {
          clearTimeout(searchTimeout);
          searchTimeout = setTimeout(() => {
-            const searchTerm = e.target.value.toLowerCase().trim();
-            
-            if (!searchTerm) {
-               this.currentData = this.allDocuments;
-            } else {
-               this.currentData = this.allDocuments.filter(item => 
-                  item.question.toLowerCase().includes(searchTerm) || 
-                  item.answer.toLowerCase().includes(searchTerm)
-               );
-            }
-            
-            this.currentPage = 1;
-            this.updateTable();
+            this.applyFilters();
          }, 300);
       });
+   }
+
+   static setupSortListener() {
+      const sortBtn = document.getElementById('kb-sort-btn');
+      const sortMenu = document.getElementById('kb-sort-menu');
+      if (!sortBtn || !sortMenu) return;
+
+      sortBtn.addEventListener('click', (e) => {
+         e.stopPropagation();
+         sortMenu.classList.toggle('hidden');
+      });
+
+      sortMenu.querySelectorAll('button').forEach(btn => {
+         btn.addEventListener('click', (e) => {
+            const sortType = btn.getAttribute('data-sort');
+            this.handleSort(sortType);
+            sortMenu.classList.add('hidden');
+         });
+      });
+
+      document.addEventListener('click', (e) => {
+         if (!sortMenu.contains(e.target) && e.target !== sortBtn) {
+            sortMenu.classList.add('hidden');
+         }
+      });
+   }
+
+   static handleSort(type) {
+      this.currentSortType = type;
+      const labelEl = document.getElementById('kb-sort-label');
+      if (labelEl) {
+         const labels = {
+            'all': 'All',
+            'pdf': 'PDF',
+            'csv': 'CSV',
+            'manual': 'Manual'
+         };
+         labelEl.textContent = labels[type] || 'All';
+      }
+      this.currentPage = 1; // Reset to first page when filtering
+      this.applyFilters();
+   }
+
+   static applyFilters() {
+      const searchInput = document.getElementById('kb-search');
+      const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+      let filtered = [...this.allDocuments];
+
+      // Apply Type Filter
+      if (this.currentSortType && this.currentSortType !== 'all') {
+         filtered = filtered.filter(item => item.type === this.currentSortType);
+      }
+
+      // Apply Search Filter
+      if (searchTerm) {
+         filtered = filtered.filter(item =>
+            (item.question && item.question.toLowerCase().includes(searchTerm)) ||
+            (item.answer && item.answer.toLowerCase().includes(searchTerm))
+         );
+      }
+
+      // Default sort by updatedAt desc for the resulting set
+      filtered.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+
+      this.currentData = filtered;
+      this.updateTable();
    }
 
    static injectModal() {
@@ -433,7 +533,7 @@ class KnowledgeBase {
         <div id="modal-backdrop" class="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div>
 
         <div id="modal-container" class="absolute inset-0 z-10 overflow-y-auto flex items-center justify-center p-4">
-            <div id="modal-panel" class="relative transform overflow-hidden rounded-[24px] bg-white text-left shadow-2xl transition-all w-full max-w-[600px] scale-95 opacity-0 duration-300 p-8"         
+            <div id="modal-panel" class="relative transform overflow-hidden rounded-[24px] bg-white text-left shadow-2xl transition-all w-full max-w-[600px] scale-95 opacity-0 duration-300 p-8">
               <button id="modal-close-btn" class="absolute right-8 top-8 text-gray-400 hover:text-gray-600 transition-colors z-20">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                    <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -474,8 +574,8 @@ class KnowledgeBase {
                        </div>
                     </button>
 
-                    <button disabled class="w-full flex items-center gap-4 p-4 rounded-xl border border-gray-200 opacity-50 cursor-not-allowed text-left group bg-gray-50">
-                       <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                    <button id="btn-add-pdf" class="w-full flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all text-left group">
+                       <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:text-gray-700 transition-colors">
                           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                              <polyline points="14 2 14 8 20 8"></polyline>
@@ -484,10 +584,83 @@ class KnowledgeBase {
                           </svg>
                        </div>
                        <div>
-                          <p class="text-[14px] font-bold text-gray-900">Import .PDF, .DOCX files</p>
-                          <p class="text-[12px] text-gray-500">Coming soon</p>
+                          <p class="text-[14px] font-bold text-gray-900">Import .PDF files</p>
+                          <p class="text-[12px] text-gray-500">Upload PDF documents for semantic search</p>
                        </div>
                     </button>
+                 </div>
+              </div>
+
+              <div id="modal-view-pdf" class="hidden">
+                 <div class="mb-6">
+                    <div class="w-10 h-10 rounded-lg border border-gray-200 flex items-center justify-center mb-4 text-gray-600">
+                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                          <polyline points="14 2 14 8 20 8"></polyline>
+                          <line x1="16" y1="13" x2="8" y2="13"></line>
+                          <line x1="16" y1="17" x2="8" y2="17"></line>
+                       </svg>
+                    </div>
+                    <h3 class="text-[20px] font-bold text-gray-900 mb-1">Import PDF Document</h3>
+                    <p class="text-[14px] text-gray-500">Upload a PDF file. Any format is supported - no Q&A structure required.</p>
+                 </div>
+
+                 <div id="pdf-upload-area" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#E5A000] transition-colors cursor-pointer bg-gray-50">
+                    <input type="file" id="pdf-file-input" accept=".pdf" class="hidden">
+                    <div class="flex flex-col items-center">
+                       <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-gray-500">
+                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                             <polyline points="17 8 12 3 7 8"></polyline>
+                             <line x1="12" y1="3" x2="12" y2="15"></line>
+                          </svg>
+                       </div>
+                       <p class="text-[15px] font-semibold text-gray-900 mb-1">Click to upload or drag and drop</p>
+                       <p class="text-[13px] text-gray-500">PDF files only</p>
+                    </div>
+                 </div>
+
+                 <div id="pdf-file-preview" class="hidden mt-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                    <div class="flex items-center justify-between">
+                       <div class="flex items-center gap-3">
+                          <div class="w-8 h-8 rounded bg-purple-100 flex items-center justify-center">
+                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-purple-600">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 9 20 9"></polyline>
+                             </svg>
+                          </div>
+                          <div>
+                             <p id="pdf-file-name" class="text-[14px] font-semibold text-gray-900 truncate max-w-[200px]"></p>
+                             <p id="pdf-file-size" class="text-[12px] text-gray-500"></p>
+                          </div>
+                       </div>
+                       <button id="pdf-file-remove" class="text-gray-400 hover:text-red-500 transition-colors">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                             <line x1="18" y1="6" x2="6" y2="18"></line>
+                             <line x1="6" y1="6" x2="18" y2="18"></line>
+                          </svg>
+                       </button>
+                    </div>
+                 </div>
+
+                 <div class="mt-6 space-y-4">
+                    <input type="text" id="pdf-title-input" placeholder="Document title (optional)" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#E5A000] focus:ring-1 focus:ring-[#E5A000] text-[14px]">
+                    <textarea id="pdf-description-input" placeholder="Document description (optional)" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#E5A000] focus:ring-1 focus:ring-[#E5A000] text-[14px] resize-none h-24"></textarea>
+                 </div>
+
+                 <div id="pdf-upload-progress" class="hidden mt-4">
+                    <div class="flex items-center justify-between mb-2">
+                       <span class="text-[13px] font-semibold text-gray-700">Uploading...</span>
+                       <span id="pdf-progress-percent" class="text-[13px] font-semibold text-[#E5A000]">0%</span>
+                    </div>
+                    <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                       <div id="pdf-progress-bar" class="h-full bg-[#E5A000] transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                 </div>
+
+                 <div class="mt-6 flex gap-3">
+                    <button id="pdf-cancel-btn" class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold transition-colors text-[14px]">Cancel</button>
+                    <button id="btn-pdf-upload" disabled class="flex-1 px-4 py-2.5 bg-[#E5A000] hover:bg-[#D49000] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors text-[14px]">Upload PDF</button>
                  </div>
               </div>
 
@@ -649,15 +822,19 @@ class KnowledgeBase {
       const viewSelection = document.getElementById('modal-view-selection');
       const viewManual = document.getElementById('modal-view-manual');
       const viewCsv = document.getElementById('modal-view-csv');
+      const viewPdf = document.getElementById('modal-view-pdf');
       const viewEdit = document.getElementById('modal-view-edit');
       const viewDelete = document.getElementById('modal-view-delete');
 
       const btnAddManual = document.getElementById('btn-add-manual');
       const btnAddCsv = document.getElementById('btn-add-csv');
+      const btnAddPdf = document.getElementById('btn-add-pdf');
       const btnManualCancel = document.getElementById('btn-manual-cancel');
       const btnManualSubmit = document.getElementById('btn-manual-submit');
       const btnCsvCancel = document.getElementById('btn-csv-cancel');
       const btnCsvUpload = document.getElementById('btn-csv-upload');
+      const btnPdfCancel = document.getElementById('pdf-cancel-btn');
+      const btnPdfUpload = document.getElementById('btn-pdf-upload');
       const btnEditCancel = document.getElementById('btn-edit-cancel');
       const btnEditSubmit = document.getElementById('btn-edit-submit');
       const btnDeleteCancel = document.getElementById('btn-delete-cancel');
@@ -673,12 +850,25 @@ class KnowledgeBase {
       const csvProgressBar = document.getElementById('csv-progress-bar');
       const csvProgressPercent = document.getElementById('csv-progress-percent');
 
+      const pdfUploadArea = document.getElementById('pdf-upload-area');
+      const pdfFileInput = document.getElementById('pdf-file-input');
+      const pdfFilePreview = document.getElementById('pdf-file-preview');
+      const pdfFileName = document.getElementById('pdf-file-name');
+      const pdfFileSize = document.getElementById('pdf-file-size');
+      const pdfFileRemove = document.getElementById('pdf-file-remove');
+      const pdfUploadProgress = document.getElementById('pdf-upload-progress');
+      const pdfProgressBar = document.getElementById('pdf-progress-bar');
+      const pdfProgressPercent = document.getElementById('pdf-progress-percent');
+      const pdfTitleInput = document.getElementById('pdf-title-input');
+      const pdfDescriptionInput = document.getElementById('pdf-description-input');
+
       const manualQuestionInput = document.getElementById('manual-question-input');
       const manualAnswerInput = document.getElementById('manual-answer-input');
       const editQuestionInput = document.getElementById('edit-question-input');
       const editAnswerInput = document.getElementById('edit-answer-input');
 
       let selectedCsvFile = null;
+      let selectedPdfFile = null;
       let editingItemId = null;
 
       const openModal = () => {
@@ -696,25 +886,30 @@ class KnowledgeBase {
          modalPanel.classList.add('scale-95', 'opacity-0');
          setTimeout(() => {
             modal.classList.add('hidden');
-            [viewSelection, viewManual, viewCsv, viewEdit, viewDelete].forEach(v => v.classList.add('hidden'));
+            [viewSelection, viewManual, viewCsv, viewPdf, viewEdit, viewDelete].forEach(v => v.classList.add('hidden'));
             viewSelection.classList.remove('hidden');
-            
+
             // Reset fields
             if (manualQuestionInput) manualQuestionInput.value = '';
             if (manualAnswerInput) manualAnswerInput.value = '';
             if (editQuestionInput) editQuestionInput.value = '';
             if (editAnswerInput) editAnswerInput.value = '';
-            
+            if (pdfTitleInput) pdfTitleInput.value = '';
+            if (pdfDescriptionInput) pdfDescriptionInput.value = '';
+
             selectedCsvFile = null;
+            selectedPdfFile = null;
             if (csvFilePreview) csvFilePreview.classList.add('hidden');
+            if (pdfFilePreview) pdfFilePreview.classList.add('hidden');
             if (btnCsvUpload) btnCsvUpload.disabled = true;
+            if (btnPdfUpload) btnPdfUpload.disabled = true;
             editingItemId = null;
             this.pendingDeleteId = null;
          }, 300);
       };
 
       const showView = (viewToShow) => {
-         [viewSelection, viewManual, viewCsv, viewEdit, viewDelete].forEach(v => v.classList.add('hidden'));
+         [viewSelection, viewManual, viewCsv, viewPdf, viewEdit, viewDelete].forEach(v => v.classList.add('hidden'));
          viewToShow.classList.remove('hidden');
       };
 
@@ -735,6 +930,19 @@ class KnowledgeBase {
          csvFileInfo.textContent = `${(file.size / 1024).toFixed(2)} KB`;
          csvFilePreview.classList.remove('hidden');
          btnCsvUpload.disabled = false;
+      };
+
+      const handlePdfFileSelect = (file) => {
+         if (!file || !file.name.endsWith('.pdf')) {
+            this.showToast('Please select a valid PDF file', 'error');
+            return;
+         }
+
+         selectedPdfFile = file;
+         pdfFileName.textContent = file.name;
+         pdfFileSize.textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+         pdfFilePreview.classList.remove('hidden');
+         btnPdfUpload.disabled = false;
       };
 
       const parseCSVLine = (line) => {
@@ -792,7 +1000,7 @@ class KnowledgeBase {
                      if (values.length >= Math.max(qIdx, aIdx) + 1) {
                         let q = values[qIdx]?.trim();
                         let a = values[aIdx]?.trim();
-                        
+
                         // Clean quotes if wrapped
                         if (q?.startsWith('"') && q?.endsWith('"')) q = q.slice(1, -1);
                         if (a?.startsWith('"') && a?.endsWith('"')) a = a.slice(1, -1);
@@ -819,12 +1027,12 @@ class KnowledgeBase {
             btnCsvUpload.disabled = true;
             btnCsvUpload.textContent = 'Processing...';
             csvUploadProgress.classList.remove('hidden');
-            
+
             csvProgressBar.style.width = '30%';
             csvProgressPercent.textContent = '30%';
 
             const items = await parseCsvFile(selectedCsvFile);
-            
+
             csvProgressBar.style.width = '60%';
             csvProgressPercent.textContent = '60%';
 
@@ -840,7 +1048,7 @@ class KnowledgeBase {
             }
 
             const result = await response.json();
-            
+
             csvProgressBar.style.width = '100%';
             csvProgressPercent.textContent = '100%';
 
@@ -856,6 +1064,72 @@ class KnowledgeBase {
             btnCsvUpload.disabled = false;
             btnCsvUpload.textContent = 'Upload CSV';
             csvUploadProgress.classList.add('hidden');
+         }
+      };
+
+      const uploadPdfFile = async () => {
+         if (!selectedPdfFile) return;
+
+         try {
+            btnPdfUpload.disabled = true;
+            btnPdfUpload.textContent = 'Uploading...';
+            pdfUploadProgress.classList.remove('hidden');
+
+            pdfProgressBar.style.width = '30%';
+            pdfProgressPercent.textContent = '30%';
+
+            // Read file as base64
+            const reader = new FileReader();
+            reader.onload = async () => {
+               try {
+                  const base64Content = reader.result.split(',')[1]; // Extract base64 part
+
+                  pdfProgressBar.style.width = '60%';
+                  pdfProgressPercent.textContent = '60%';
+
+                  const response = await fetch('/api/knowledge/upload/pdf', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({
+                        filename: selectedPdfFile.name,
+                        content: base64Content,
+                        title: pdfTitleInput.value || selectedPdfFile.name,
+                        description: pdfDescriptionInput.value
+                     })
+                  });
+
+                  if (!response.ok) {
+                     const error = await response.json();
+                     throw new Error(error.error || `HTTP error! status: ${response.status}`);
+                  }
+
+                  const result = await response.json();
+
+                  pdfProgressBar.style.width = '100%';
+                  pdfProgressPercent.textContent = '100%';
+
+                  setTimeout(() => {
+                     closeModal();
+                     this.showToast('PDF uploaded successfully', 'success');
+                     this.loadDocuments();
+                  }, 500);
+
+               } catch (error) {
+                  console.error('PDF upload failed:', error);
+                  this.showToast(error.message || 'Failed to upload PDF', 'error');
+                  btnPdfUpload.disabled = false;
+                  btnPdfUpload.textContent = 'Upload PDF';
+                  pdfUploadProgress.classList.add('hidden');
+               }
+            };
+            reader.readAsDataURL(selectedPdfFile);
+
+         } catch (error) {
+            console.error('PDF upload error:', error);
+            this.showToast(error.message || 'Failed to upload PDF', 'error');
+            btnPdfUpload.disabled = false;
+            btnPdfUpload.textContent = 'Upload PDF';
+            pdfUploadProgress.classList.add('hidden');
          }
       };
 
@@ -968,12 +1242,15 @@ class KnowledgeBase {
       if (closeBtn) closeBtn.addEventListener('click', closeModal);
       if (btnAddManual) btnAddManual.addEventListener('click', () => showView(viewManual));
       if (btnAddCsv) btnAddCsv.addEventListener('click', () => showView(viewCsv));
+      if (btnAddPdf) btnAddPdf.addEventListener('click', () => showView(viewPdf));
       if (btnManualCancel) btnManualCancel.addEventListener('click', closeModal);
       if (btnCsvCancel) btnCsvCancel.addEventListener('click', closeModal);
+      if (btnPdfCancel) btnPdfCancel.addEventListener('click', closeModal);
       if (btnEditCancel) btnEditCancel.addEventListener('click', closeModal);
       if (btnDeleteCancel) btnDeleteCancel.addEventListener('click', closeModal);
       if (btnManualSubmit) btnManualSubmit.addEventListener('click', saveManualEntry);
       if (btnCsvUpload) btnCsvUpload.addEventListener('click', uploadCsvFile);
+      if (btnPdfUpload) btnPdfUpload.addEventListener('click', uploadPdfFile);
       if (btnEditSubmit) btnEditSubmit.addEventListener('click', saveEditEntry);
       if (btnDeleteConfirm) btnDeleteConfirm.addEventListener('click', confirmDelete);
 
@@ -1010,6 +1287,42 @@ class KnowledgeBase {
             csvFileInput.value = '';
             csvFilePreview.classList.add('hidden');
             btnCsvUpload.disabled = true;
+         });
+      }
+
+      if (pdfUploadArea) {
+         pdfUploadArea.addEventListener('click', () => pdfFileInput.click());
+         pdfUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            pdfUploadArea.classList.add('border-[#E5A000]', 'bg-orange-50');
+         });
+         pdfUploadArea.addEventListener('dragleave', () => {
+            pdfUploadArea.classList.remove('border-[#E5A000]', 'bg-orange-50');
+         });
+         pdfUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            pdfUploadArea.classList.remove('border-[#E5A000]', 'bg-orange-50');
+            if (e.dataTransfer.files.length > 0) {
+               handlePdfFileSelect(e.dataTransfer.files[0]);
+            }
+         });
+      }
+
+      if (pdfFileInput) {
+         pdfFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+               handlePdfFileSelect(e.target.files[0]);
+            }
+         });
+      }
+
+      if (pdfFileRemove) {
+         pdfFileRemove.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectedPdfFile = null;
+            pdfFileInput.value = '';
+            pdfFilePreview.classList.add('hidden');
+            btnPdfUpload.disabled = true;
          });
       }
 

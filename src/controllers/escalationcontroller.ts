@@ -29,7 +29,8 @@ export class EscalationController {
   }
 
   /**
-   * POST /api/escalations
+   * POST /api/e
+   * scalations
    * Manually create an escalation (optional, mostly handled by ChatController)
    */
   static async createEscalation(req: Request, res: Response): Promise<void> {

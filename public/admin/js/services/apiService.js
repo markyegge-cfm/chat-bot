@@ -133,23 +133,6 @@ class APIService {
   }
 
   /**
-   * Admin method to get conversation messages
-   */
-  async adminGetConversationMessages(sessionId) {
-    try {
-      const response = await fetch(
-        `${this.baseUrl}/api/conversations/${sessionId}/messages`,
-        { headers: this.getHeaders() }
-      );
-      const result = await response.json();
-      return result;
-    } catch (e) {
-      console.error("API Error:", e);
-      return { messages: [] };
-    }
-  }
-
-  /**
    * Update conversation status
    */
   async updateConversationStatus(sessionId, status) {

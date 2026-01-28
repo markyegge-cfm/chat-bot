@@ -229,9 +229,9 @@ class Conversations {
 
    static async fetchConversationMessages(conversationId) {
       try {
-         // When backend API is ready, use:
-         const response = await window.apiService.adminGetConversationMessages(conversationId);
-         return response.messages || [];
+         // Use the standard getConversationMessages method
+         const response = await window.apiService.getConversationMessages(conversationId);
+         return Array.isArray(response) ? response : [];
       } catch (error) {
          console.error('API Error:', error);
          return [];

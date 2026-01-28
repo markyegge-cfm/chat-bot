@@ -5,13 +5,14 @@
 
 import { Router } from 'express';
 import {
-    createKnowledge,
-    deleteKnowledge,
-    getAllKnowledge,
-    getKnowledgeById,
-    getKnowledgeStats,
-    updateKnowledge,
-    uploadCSV,
+  createKnowledge,
+  deleteKnowledge,
+  getAllKnowledge,
+  getKnowledgeById,
+  getKnowledgeStats,
+  updateKnowledge,
+  uploadCSV,
+  uploadPDF,
 } from '../controllers/knowledgeController';
 
 const router = Router();
@@ -36,6 +37,9 @@ router.delete('/api/knowledge/:id', deleteKnowledge);
 
 // Upload CSV
 router.post('/api/knowledge/upload/csv', uploadCSV);
+
+// Upload PDF
+router.post('/api/knowledge/upload/pdf', uploadPDF);
 
 // Debug: Check RAG status
 router.get('/api/knowledge/debug/rag-status', async (req: any, res: any) => {

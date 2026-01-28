@@ -17,6 +17,7 @@ interface KnowledgeMetadata {
   status: 'PROCESSING' | 'COMPLETED' | 'FAILED';
   createdAt: string;
   updatedAt: string;
+  fileUrl?: string; // For PDF files stored in Firebase Storage
 }
 
 export interface Escalation {
@@ -38,6 +39,7 @@ interface AdminUser {
 class FirebaseService {
   private db: admin.firestore.Firestore | null = null;
   private auth: admin.auth.Auth | null = null;
+  private bucket: any | null = null;
   private initialized: boolean = false;
   // Fallback to 'chatbot-rag' if FIRESTORE_DATABASE_ID is not in .env
   private databaseId: string = process.env.FIRESTORE_DATABASE_ID || 'chatbot-rag';
@@ -75,6 +77,12 @@ class FirebaseService {
 
       // Initialize Auth
       this.auth = getAuth();
+
+      // Initialize Storage - specify the default bucket for the project
+      // Format: project-id.appspot.com
+      const bucketName = `${process.env.PROJECT_ID}.appspot.com`;
+      console.log(`🪣 Initializing Storage bucket: ${bucketName}`);
+      this.bucket = admin.storage().bucket(bucketName);
 
       this.initialized = true;
 
@@ -336,6 +344,67 @@ class FirebaseService {
   }
 
   /**
+   * Upload PDF file to Firebase Storage
+   * Returns the public download URL
+   */
+  async uploadPdfFile(fileBuffer: Buffer, filename: string, knowledgeId: string): Promise<string> {
+    if (!this.bucket) await this.initialize();
+
+    const filePath = `pdfs/${knowledgeId}/${filename}`;
+    console.log(`📁 Uploading PDF to: ${filePath}`);
+    console.log(`🪣 Bucket name: ${this.bucket!.name}`);
+    
+    try {
+      const file = this.bucket!.file(filePath);
+
+      // Upload file
+      await file.save(fileBuffer, {
+        metadata: {
+          contentType: 'application/pdf',
+          custom: {
+            knowledgeId,
+            uploadedAt: new Date().toISOString(),
+          },
+        },
+      });
+
+      console.log(`✅ File saved to Firebase Storage`);
+
+      // Make file publicly readable
+      await file.makePublic();
+      console.log(`✅ File made public`);
+
+      // Return public URL
+      const publicUrl = `https://storage.googleapis.com/${this.bucket!.name}/${filePath}`;
+      console.log(`✅ Public URL: ${publicUrl}`);
+      return publicUrl;
+    } catch (error) {
+      console.error(`❌ Error uploading PDF to Firebase Storage:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete PDF file from Firebase Storage
+   */
+  async deletePdfFile(knowledgeId: string): Promise<void> {
+    if (!this.bucket) await this.initialize();
+
+    try {
+      // Get all files in the knowledge PDF directory
+      const [files] = await this.bucket!.getFiles({ prefix: `pdfs/${knowledgeId}/` });
+
+      // Delete all files
+      const deletePromises = files.map((file: any) => file.delete());
+      await Promise.all(deletePromises);
+
+      console.log(`✅ Deleted PDF files for knowledge: ${knowledgeId}`);
+    } catch (error: any) {
+      console.warn(`⚠️  Could not delete PDF files for ${knowledgeId}:`, error.message);
+    }
+  }
+
+  /**
    * Get knowledge count
    */
   async getKnowledgeCount(): Promise<number> {
@@ -414,12 +483,12 @@ class FirebaseService {
         timestamp,
       });
 
-    // Update conversation metadata
-    await this.db!.collection('conversations').doc(sessionId).update({
+    // Update conversation metadata (or create if doesn't exist)
+    await this.db!.collection('conversations').doc(sessionId).set({
       lastMessage: content.substring(0, 100),
       updatedAt: timestamp,
       messageCount: admin.firestore.FieldValue.increment(1),
-    });
+    }, { merge: true }); // merge: true ensures we don't overwrite existing fields
   }
 
   /**

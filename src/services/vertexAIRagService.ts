@@ -36,7 +36,6 @@ interface CacheEntry {
  * It handles:
  * 1. Managing the RAG Corpus (uploading, listing, deleting files).
  * 2. Querying the Gemini model with retrieval context (RAG).
- * 3. Local caching to optimize performance and reduce API costs.
  */
 class VertexAIRagService {
   private config: RagCorpusConfig;

@@ -195,20 +195,6 @@ function extractEmail(text: string): string | null {
 
 export class ChatController {
   
-  // New method for API endpoint: GET /api/escalations
-  static async getEscalations(req: Request, res: Response): Promise<void> {
-    try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      
-      const result = await firebaseService.getEscalations(page, limit);
-      res.json({ success: true, ...result });
-    } catch (error) {
-      console.error('Error fetching escalations:', error);
-      res.status(500).json({ success: false, error: 'Failed to fetch escalations' });
-    }
-  }
-
   static async handleMessage(req: Request, res: Response): Promise<void> {
     const { message, sessionId } = req.body;
 
@@ -275,6 +261,17 @@ export class ChatController {
 
             // Send confirmation response immediately
             const confirmationMsg = "Thank you! We've created a support ticket for your issue. Our team will review it and contact you shortly via email.";
+            
+            // Ensure session exists before adding messages
+            try {
+              const existingSession = await firebaseService.getConversation(sessionId);
+              if (!existingSession) {
+                await firebaseService.startConversation(sessionId, 'anonymous');
+                console.log(`[Conversation] New session created: ${sessionId}`);
+              }
+            } catch (sessionError) {
+              console.warn('Could not verify/create session:', sessionError);
+            }
             
             // Save to history
             await firebaseService.addMessage(sessionId, 'user', message);

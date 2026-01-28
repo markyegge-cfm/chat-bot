@@ -20,7 +20,10 @@ const PORT: number = parseInt(process.env.PORT || '3000');
 // MIDDLEWARE
 // ============================================
 app.use(cors());
-app.use(express.json());
+// Increase body size limit to 50MB to support PDF uploads
+// (PDFs are base64-encoded, making them ~33% larger)
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ limit: '15mb', extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // ============================================

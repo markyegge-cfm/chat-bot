@@ -50,129 +50,7 @@ class ConversationService {
   }
 
   /**
-   * Create a new conversation session
-   */
-  async createSession(userId: string, sessionId: string): Promise<ConversationSession> {
-    try {
-      const db = await this.getDb();
-      const conversationRef = db.collection('conversations').doc(sessionId);
-
-      const session: ConversationSession = {
-        id: sessionId,
-        userId,
-        sessionId,
-        startedAt: new Date().toISOString(),
-        lastMessageAt: new Date().toISOString(),
-        status: 'active',
-        messages: [],
-        topic: 'General Inquiry',
-      };
-
-      await conversationRef.set(session);
-      console.log(`✅ Conversation session created: ${sessionId}`);
-
-      return session;
-    } catch (error: any) {
-      // If NOT_FOUND error, Firestore API might not be enabled
-      if (error.code === 5 || error.message?.includes('NOT_FOUND')) {
-        console.warn('[Conversation] Firestore collection not available - will skip conversation storage');
-        throw error;
-      }
-      console.error('Failed to create conversation session:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Add a message to a conversation session
-   */
-  async addMessage(
-    sessionId: string,
-    sender: 'user' | 'bot',
-    content: string
-  ): Promise<Message> {
-    try {
-      // Use the Firebase service's initialized DB instance
-      let db = firebaseService.getDb();
-      if (!db) {
-        await firebaseService.initialize();
-        db = firebaseService.getDb();
-      }
-      
-      if (!db) {
-        throw new Error('Firestore not initialized');
-      }
-
-      const conversationRef = db.collection('conversations').doc(sessionId);
-
-      const message: Message = {
-        id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        sender,
-        content,
-        timestamp: new Date().toISOString(),
-      };
-
-      // Add message to the messages array
-      await conversationRef.update({
-        messages: admin.firestore.FieldValue.arrayUnion(message),
-        lastMessageAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      console.log(`[Conversation] Message added to ${sessionId} from ${sender}`);
-      return message;
-    } catch (error: any) {
-      // If NOT_FOUND error, Firestore collection might not exist
-      if (error.code === 5 || error.message?.includes('NOT_FOUND')) {
-        console.warn('[Conversation] Firestore collection not available - skipping message save');
-        throw error;
-      }
-      console.error('Failed to add message:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Get a conversation session by ID
-   */
-  async getSession(sessionId: string): Promise<ConversationSession | null> {
-    try {
-      const db = await this.getDb();
-      const doc = await db.collection('conversations').doc(sessionId).get();
-
-      if (!doc.exists) return null;
-
-      return doc.data() as ConversationSession;
-    } catch (error: any) {
-      // If NOT_FOUND error, collection doesn't exist yet - that's okay
-      if (error.code === 5 || error.message?.includes('NOT_FOUND')) {
-        return null;
-      }
-      console.error('Failed to get conversation session:', error.message);
-      return null;
-    }
-  }
-
-  /**
-   * Get all conversation sessions (for admin dashboard)
-   */
-  async getAllSessions(limit: number = 50): Promise<ConversationSession[]> {
-    try {
-      const db = await this.getDb();
-      const snapshot = await db
-        .collection('conversations')
-        .orderBy('lastMessageAt', 'desc')
-        .limit(limit)
-        .get();
-
-      return snapshot.docs.map((doc) => doc.data() as ConversationSession);
-    } catch (error: any) {
-      console.error('Failed to get conversations:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Get conversations with pagination
+   * Get all conversation sessions (with pagination)
    */
   async getSessionsPaginated(
     page: number = 1,
@@ -189,7 +67,7 @@ class ConversationService {
       const offset = (page - 1) * pageSize;
       const snapshot = await db
         .collection('conversations')
-        .orderBy('lastMessageAt', 'desc')
+        .orderBy('updatedAt', 'desc')
         .offset(offset)
         .limit(pageSize)
         .get();
@@ -198,8 +76,8 @@ class ConversationService {
         const data = doc.data();
         return {
           ...data,
-          lastMessage: data.messages?.[data.messages.length - 1]?.content || 'No messages',
-          messageCount: data.messages?.length || 0,
+          lastMessage: data.lastMessage || 'No messages',
+          messageCount: data.messageCount || 0,
         } as ConversationSession & { lastMessage: string; messageCount: number };
       });
 
@@ -212,89 +90,28 @@ class ConversationService {
 
   /**
    * Get messages for a specific conversation
+   * Messages are stored in a subcollection: conversations/{sessionId}/messages
    */
   async getMessages(sessionId: string): Promise<Message[]> {
     try {
       const db = await this.getDb();
-      const doc = await db.collection('conversations').doc(sessionId).get();
-
-      if (!doc.exists) return [];
-
-      return doc.data()?.messages || [];
-    } catch (error: any) {
-      console.error('Failed to get messages:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Update conversation status (escalate, close, etc.)
-   */
-  async updateStatus(
-    sessionId: string,
-    status: 'active' | 'closed' | 'escalated'
-  ): Promise<void> {
-    try {
-      const db = await this.getDb();
-      await db.collection('conversations').doc(sessionId).update({ status });
-      console.log(`[Conversation] Status updated to ${status} for ${sessionId}`);
-    } catch (error: any) {
-      console.error('Failed to update conversation status:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update conversation summary/topic
-   */
-  async updateSessionMetadata(
-    sessionId: string,
-    metadata: { topic?: string; summary?: string }
-  ): Promise<void> {
-    try {
-      const db = await this.getDb();
-      await db.collection('conversations').doc(sessionId).update(metadata);
-    } catch (error: any) {
-      console.error('Failed to update session metadata:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Delete a conversation (archive)
-   */
-  async archiveSession(sessionId: string): Promise<void> {
-    try {
-      const db = await this.getDb();
-      await db.collection('conversations').doc(sessionId).update({
-        status: 'closed',
-        archivedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-    } catch (error: any) {
-      console.error('Failed to archive conversation:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get conversations by status
-   */
-  async getConversationsByStatus(
-    status: 'active' | 'closed' | 'escalated',
-    limit: number = 50
-  ): Promise<ConversationSession[]> {
-    try {
-      const db = await this.getDb();
+      
+      // Fetch messages from the subcollection
       const snapshot = await db
         .collection('conversations')
-        .where('status', '==', status)
-        .orderBy('lastMessageAt', 'desc')
-        .limit(limit)
+        .doc(sessionId)
+        .collection('messages')
+        .orderBy('timestamp', 'asc')
         .get();
 
-      return snapshot.docs.map((doc) => doc.data() as ConversationSession);
+      return snapshot.docs.map((doc) => ({
+        id: doc.id,
+        sender: doc.data().sender,
+        content: doc.data().content,
+        timestamp: doc.data().timestamp?.toDate?.().toISOString() || new Date().toISOString(),
+      }));
     } catch (error: any) {
-      console.error('Failed to get conversations by status:', error);
+      console.error('Failed to get messages:', error);
       return [];
     }
   }
