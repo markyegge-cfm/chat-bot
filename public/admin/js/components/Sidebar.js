@@ -1,5 +1,9 @@
 class Sidebar {
   static render() {
+    const email = sessionStorage.getItem('adminEmail') || 'admin@example.com';
+    const initials = email.split('@')[0].substring(0, 2).toUpperCase();
+    const name = email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1);
+
     return `
       <aside class="sidebar">
         <!-- Header / Logo -->
@@ -38,12 +42,12 @@ class Sidebar {
         <!-- Footer / User Profile -->
         <div class="sidebar-footer">
           <div class="user-profile">
-            <div class="user-avatar">
-              <span>AT</span>
+            <div class="user-avatar text-white font-bold bg-[#E5A000]">
+              <span>${initials}</span>
             </div>
             <div class="user-info-text">
-              <div class="user-name">Alexander</div>
-              <div class="user-email">m@example.com</div>
+              <div class="user-name">${name}</div>
+              <div class="user-email">${email}</div>
             </div>
           </div>
           <button id="logout-btn" class="logout-icon-btn" title="Logout">

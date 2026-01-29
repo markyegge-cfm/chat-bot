@@ -62,13 +62,14 @@ router.post('/api/auth/login', async (req: Request, res: Response): Promise<void
         returnSecureToken: true
       });
 
-      const { idToken, localId, email: userEmail } = response.data;
+      const { idToken, refreshToken, localId, email: userEmail } = response.data;
 
       console.log(`✅ Login successful for ${email}`);
 
       (res as any).json({
         success: true,
         token: idToken,
+        refreshToken: refreshToken,
         user: {
           uid: localId,
           email: userEmail,
@@ -143,6 +144,54 @@ router.post('/api/auth/forgot-password', async (req: Request, res: Response): Pr
     (res as any).json({
       success: true,
       message: 'If an account exists for this email, you will receive a reset link shortly.'
+    });
+  }
+});
+
+/**
+ * POST /api/auth/refresh-token
+ * Exchange a refreshToken for a new idToken
+ */
+router.post('/api/auth/refresh-token', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { refreshToken } = req.body;
+    const cleanApiKey = API_KEY?.trim()?.replace(/['"]/g, '');
+
+    if (!refreshToken) {
+      (res as any).status(400).json({ success: false, error: 'Refresh token required' });
+      return;
+    }
+
+    const refreshUrl = `https://securetoken.googleapis.com/v1/token?key=${cleanApiKey}`;
+
+    const response = await axios.post(refreshUrl, {
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken
+    });
+
+    // Firebase returns { access_token, expires_in, refresh_token, token_type, user_id, project_id }
+    const { access_token, refresh_token, expires_in, user_id } = response.data;
+
+    // Get real user info from Admin SDK to ensure email is current
+    const userRecord = await admin.auth().getUser(user_id);
+
+    (res as any).json({
+      success: true,
+      token: access_token,
+      refreshToken: refresh_token,
+      expiresIn: expires_in,
+      user: {
+        uid: user_id,
+        email: userRecord.email,
+        role: 'admin'
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Refresh token error:', error.response?.data || error.message);
+    (res as any).status(401).json({
+      success: false,
+      error: 'Session expired. Please login again.'
     });
   }
 });

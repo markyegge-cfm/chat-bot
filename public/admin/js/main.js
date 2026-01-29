@@ -12,27 +12,89 @@ class AdminApp {
         }
 
         // Run auth check before anything else
-        if (this.checkAuth()) {
-            this.init();
-        }
+        this.checkAuth().then(isAuth => {
+            if (isAuth) {
+                this.init();
+            }
+        });
     }
 
     /**
      * Authentication Guard
      * Verifies if the user has a valid session token
+     * Handles "Remember Me" via Refresh Tokens
      */
-    checkAuth() {
+    async checkAuth() {
         const token = sessionStorage.getItem('authToken');
+        const refreshToken = localStorage.getItem('adminRefreshToken');
 
-        // If no token exists, redirect to login page
-        if (!token) {
-            console.warn('Unauthorized access attempt. Redirecting to login...');
-            window.location.href = 'login.html';
-            return false;
+        // 1. If we have a session token, assume it's valid for now
+        if (token) {
+            this.setupAutoRefresh();
+            return true;
         }
 
-        // Optional: You could add logic here to decode the JWT and check expiry
-        return true;
+        // 2. If no session token but we have a refresh token (Remember Me)
+        if (refreshToken) {
+            console.log('🔄 Attempting to restore session via refresh token...');
+            try {
+                const refreshed = await this.performTokenRefresh(refreshToken);
+                if (refreshed) {
+                    this.setupAutoRefresh();
+                    return true;
+                }
+            } catch (err) {
+                console.error('Session restoration failed:', err);
+            }
+        }
+
+        // 3. Otherwise, unauthorized
+        console.warn('Unauthorized access attempt. Redirecting to login...');
+        window.location.href = 'login.html';
+        return false;
+    }
+
+    async performTokenRefresh(refreshToken) {
+        try {
+            const response = await fetch('/api/auth/refresh-token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refreshToken })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                sessionStorage.setItem('authToken', data.token);
+                sessionStorage.setItem('adminLoggedIn', 'true');
+
+                if (data.user && data.user.email) {
+                    sessionStorage.setItem('adminEmail', data.user.email);
+                    localStorage.setItem('adminEmail', data.user.email);
+                }
+
+                if (data.refreshToken) {
+                    localStorage.setItem('adminRefreshToken', data.refreshToken);
+                }
+                return true;
+            }
+            return false;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    setupAutoRefresh() {
+        // Refresh token every 50 minutes (Firebase tokens last 1 hour)
+        if (this.refreshInterval) clearInterval(this.refreshInterval);
+
+        this.refreshInterval = setInterval(async () => {
+            const refreshToken = localStorage.getItem('adminRefreshToken');
+            if (refreshToken) {
+                console.log('⏳ Periodically refreshing access token...');
+                await this.performTokenRefresh(refreshToken);
+            }
+        }, 50 * 60 * 1000);
     }
 
     init() {
@@ -78,12 +140,18 @@ class AdminApp {
         const sidebarPlaceholder = document.getElementById('sidebar-container');
         if (sidebarPlaceholder) {
             sidebarPlaceholder.innerHTML = Sidebar.render();
+            if (typeof Sidebar.afterRender === 'function') {
+                Sidebar.afterRender();
+            }
         }
 
         // Render Header
         const headerPlaceholder = document.getElementById('header-container');
         if (headerPlaceholder) {
             headerPlaceholder.innerHTML = Header.render();
+            if (typeof Header.afterRender === 'function') {
+                Header.afterRender();
+            }
         }
 
         // Add Logout Listener - Support multiple logout buttons
@@ -99,9 +167,11 @@ class AdminApp {
 
     logout() {
         console.log('🔓 Logging out...');
+        if (this.refreshInterval) clearInterval(this.refreshInterval);
         sessionStorage.clear();
         localStorage.removeItem('adminEmail');
         localStorage.removeItem('adminRememberMe');
+        localStorage.removeItem('adminRefreshToken');
         window.location.href = 'login.html';
     }
 
