@@ -4,7 +4,7 @@ import firebaseService from '../services/firebaseService';
 export class StatsController {
   /**
    * GET /api/stats
-   * Return aggregated dashboard statistics
+   * Return aggregated dashboard statistics.
    */
   static async getDashboardStats(req: Request, res: Response): Promise<void> {
     try {
