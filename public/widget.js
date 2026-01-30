@@ -35,7 +35,7 @@
             <div>
               <img src="/image/image copy.png" alt="Logo" style="width: 100px; height: 100px; object-fit: contain;">
             </div>
-            <span class="header-title">Chat bot</span>
+      
           </div>
           <div class="header-right">
             <button class="icon-btn" id="chatbot-close">
@@ -45,7 +45,7 @@
         </div>
 
         <div class="chatbot-messages" id="chatbot-messages">
-          <div class="chat-intro-text">Welcome to our Website! Ask us anything.</div>
+          <div class="chat-intro-text">Welcome to our website! Ask us anything.</div>
           <div class="chatbot-message bot-message" id="initial-greeting">
             <div class="message-content">
               <p>Hi! How can I support you today?</p>

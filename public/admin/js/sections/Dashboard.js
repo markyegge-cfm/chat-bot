@@ -99,23 +99,9 @@ class Dashboard {
         </div>
 
         <!-- Charts -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div class="lg:col-span-2 bg-white p-6 rounded-2xl border">
-            <h3 class="text-lg font-bold mb-6">
-              <i class="fas fa-chart-line text-blue-500"></i> Escalation Trends
-            </h3>
-            <div class="h-80">
-              <canvas id="activityChart"></canvas>
-            </div>
-          </div>
+      
 
-          <div class="bg-white p-6 rounded-2xl border">
-            <h3 class="text-lg font-bold mb-6">
-              <i class="fas fa-pie-chart text-indigo-500"></i> Knowledge Types
-            </h3>
-            <div class="h-80">
-              <canvas id="distributionChart"></canvas>
-            </div>
+         
           </div>
         </div>
       </div>
