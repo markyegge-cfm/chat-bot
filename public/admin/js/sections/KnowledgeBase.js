@@ -946,6 +946,13 @@ class KnowledgeBase {
             return;
          }
 
+         // 5MB limit for CSV (parsing large text files client-side can be slow)
+         const MAX_CSV_MB = 5;
+         if (file.size > MAX_CSV_MB * 1024 * 1024) {
+            this.showToast(`File is too large. Maximum size is ${MAX_CSV_MB} MB`, 'error');
+            return;
+         }
+
          selectedCsvFile = file;
          csvFileName.textContent = file.name;
          csvFileInfo.textContent = `${(file.size / 1024).toFixed(2)} KB`;
@@ -956,6 +963,13 @@ class KnowledgeBase {
       const handlePdfFileSelect = (file) => {
          if (!file || !(file.name.endsWith('.docx') || file.name.endsWith('.doc'))) {
             this.showToast('Please select a valid DOCX or DOC file', 'error');
+            return;
+         }
+
+         // 15MB limit for DOCX (server limit is 15MB payload)
+         const MAX_DOCX_MB = 15;
+         if (file.size > MAX_DOCX_MB * 1024 * 1024) {
+            this.showToast(`File is too large. Maximum size is ${MAX_DOCX_MB} MB`, 'error');
             return;
          }
 

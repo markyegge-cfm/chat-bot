@@ -316,7 +316,8 @@ class Escalations {
             if (!btn) return;
             const { action, id, status } = btn.dataset;
             if (action === 'delete') {
-               if (confirm('Delete this escalation?')) await this.deleteEscalation(id);
+               const ok = await this.showConfirm('Delete this escalation?');
+               if (ok) await this.deleteEscalation(id);
             } else if (action === 'toggle-status') {
                await this.toggleStatus(id, status === 'open' ? 'resolved' : 'open');
             }
@@ -356,8 +357,9 @@ class Escalations {
          }
       });
 
-      bulkDeleteBtn?.addEventListener('click', () => {
-         if (confirm(`Delete ${this.selectedIds.size} selected escalations?`)) this.deleteSelected();
+      bulkDeleteBtn?.addEventListener('click', async () => {
+         const ok = await this.showConfirm(`Delete ${this.selectedIds.size} selected escalations?`);
+         if (ok) this.deleteSelected();
       });
 
       clearBtn?.addEventListener('click', () => {
@@ -410,13 +412,72 @@ class Escalations {
             this.selectedIds.clear();
             this.updateBulkBar();
             await this.loadEscalations();
+            this.showToast(result.message || `Deleted ${ids.length} escalations`, 'success');
          }
       } catch (err) { console.error(err); }
    }
 
+   // Simple confirm modal that returns a promise
+   static showConfirm(message) {
+      return new Promise((resolve) => {
+         const overlay = document.createElement('div');
+         overlay.className = 'fixed inset-0 bg-black/40 z-[300] flex items-center justify-center';
+
+         const modal = document.createElement('div');
+         modal.className = 'bg-white rounded-lg p-6 w-[420px] shadow-lg text-center';
+         modal.innerHTML = `
+            <p class="text-gray-800 mb-4">${this.escapeHtml(message)}</p>
+            <div class="flex items-center justify-center gap-4">
+               <button class="px-4 py-2 rounded-md bg-gray-100" id="confirm-cancel">Cancel</button>
+               <button class="px-4 py-2 rounded-md bg-red-600 text-white" id="confirm-ok">Delete</button>
+            </div>
+         `;
+
+         overlay.appendChild(modal);
+         document.body.appendChild(overlay);
+
+         const cleanup = (result) => {
+            overlay.remove();
+            resolve(result);
+         };
+
+         modal.querySelector('#confirm-cancel').addEventListener('click', () => cleanup(false));
+         modal.querySelector('#confirm-ok').addEventListener('click', () => cleanup(true));
+      });
+   }
+
    static async deleteEscalation(id) {
-      await fetch(`/api/escalations/${id}`, { method: 'DELETE' });
+      try {
+         const res = await fetch(`/api/escalations/${id}`, { method: 'DELETE' });
+         const result = await res.json();
+         if (result.success) {
+            this.showToast('Escalation deleted', 'success');
+         } else {
+            this.showToast(result.error || 'Failed to delete escalation', 'error');
+         }
+      } catch (err) {
+         console.error('Failed to delete escalation:', err);
+         this.showToast('Failed to delete escalation', 'error');
+      }
       await this.loadEscalations();
+   }
+
+   static showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-[200] transition-all duration-300 transform translate-y-[-20px] opacity-0 ${type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      // Trigger animation
+      setTimeout(() => {
+         toast.classList.remove('translate-y-[-20px]', 'opacity-0');
+      }, 10);
+
+      // Remove after 3s
+      setTimeout(() => {
+         toast.classList.add('translate-y-[-20px]', 'opacity-0');
+         setTimeout(() => toast.remove(), 300);
+      }, 3000);
    }
 
    static async toggleStatus(id, newStatus) {

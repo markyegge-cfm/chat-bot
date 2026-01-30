@@ -115,6 +115,59 @@ class ConversationService {
       return [];
     }
   }
+
+  /**
+   * Delete a single conversation and its messages subcollection
+   */
+  async deleteConversation(sessionId: string): Promise<void> {
+    try {
+      const db = await this.getDb();
+
+      // Delete all messages in subcollection in batches
+      const messagesRef = db.collection('conversations').doc(sessionId).collection('messages');
+      const snapshot = await messagesRef.limit(500).get();
+      const batch = db.batch();
+      snapshot.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+
+      // Delete conversation document
+      await db.collection('conversations').doc(sessionId).delete();
+    } catch (error: any) {
+      console.error(`Failed to delete conversation ${sessionId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Batch delete conversations by IDs
+   */
+  async batchDeleteConversations(ids: string[]): Promise<void> {
+    try {
+      const db = await this.getDb();
+      for (const id of ids) {
+        await this.deleteConversation(id);
+      }
+    } catch (error: any) {
+      console.error('Failed to batch delete conversations:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete all conversations (use with caution)
+   */
+  async deleteAllConversations(): Promise<void> {
+    try {
+      const db = await this.getDb();
+      const snapshot = await db.collection('conversations').get();
+      for (const doc of snapshot.docs) {
+        await this.deleteConversation(doc.id);
+      }
+    } catch (error: any) {
+      console.error('Failed to delete all conversations:', error);
+      throw error;
+    }
+  }
 }
 
 export const conversationService = new ConversationService();

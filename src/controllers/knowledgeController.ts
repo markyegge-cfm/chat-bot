@@ -1,11 +1,8 @@
 /**
- * UPDATED: Now uses proper GCS Import API instead of broken direct upload
+ * Knowledge Base Controller - ALL uploads now use GCS Import API
  * 
- * Key changes:
- * 1. No manual chunking for DOCX - let Vertex AI handle it
- * 2. Single file upload per document
- * 3. Vertex AI creates chunks internally with proper indexing
- * 4. Much simpler code, better results
+ * IMPORTANT: The direct upload endpoint doesn't exist in Vertex AI RAG REST API.
+ * ALL file uploads (manual, CSV, DOCX) MUST use GCS staging + ImportFiles API.
  */
 
 import { type Request, type Response } from 'express';
@@ -14,7 +11,6 @@ import mammoth from 'mammoth';
 import path from 'path';
 import backgroundTaskService from '../services/backgroundTaskService';
 import firebaseService from '../services/firebaseService';
-import vertexAIRag from '../services/vertexAIRagService';
 
 const RAG_TEMP_DIR = path.join(process.cwd(), '.rag-temp');
 
@@ -23,16 +19,6 @@ function ensureTempDir() {
     fs.mkdirSync(RAG_TEMP_DIR, { recursive: true });
   }
 }
-
-const mapFileToUI = (file: any) => ({
-  id: file.id,
-  question: file.displayName || 'Unnamed Document',
-  answer: file.description || 'No content description available.',
-  type: file.type || 'manual',
-  status: file.status,
-  createdAt: file.createdAt,
-  updatedAt: file.updatedAt,
-});
 
 export const getAllKnowledge = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -108,7 +94,7 @@ export const createKnowledge = async (req: Request, res: Response): Promise<void
       updatedAt: new Date().toISOString(),
     });
 
-    // Queue RAG upload
+    // Queue RAG upload (uses GCS staging)
     ensureTempDir();
     const tempFile = path.join(RAG_TEMP_DIR, `upload_${Date.now()}_${knowledgeData.id}.txt`);
     fs.writeFileSync(tempFile, `Q: ${question.trim()}\n\nA: ${answer.trim()}`);
@@ -223,7 +209,7 @@ export const deleteKnowledge = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // Queue RAG deletion - now simpler, just one file ID
+    // Queue RAG deletion
     if (knowledge.ragFileId) {
       backgroundTaskService.queueTask('DELETE_RAG', id, {
         ragFileId: knowledge.ragFileId,
@@ -243,6 +229,7 @@ export const deleteKnowledge = async (req: Request, res: Response): Promise<void
 
 /**
  * POST /api/knowledge/upload/csv
+ * Now uses background tasks with GCS staging (same as manual/DOCX)
  */
 export const uploadCSV = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -253,51 +240,47 @@ export const uploadCSV = async (req: Request, res: Response): Promise<void> => {
     }
 
     ensureTempDir();
-    const uploadedFiles: any[] = [];
-    const errors: string[] = [];
+    const queuedItems: any[] = [];
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
 
       try {
-        const fileId = `csv_qa_${Date.now()}_${i}`;
-        const tempFile = path.join(RAG_TEMP_DIR, `${fileId}.txt`);
-        const content = `Q: ${item.question.trim()}\n\nA: ${item.answer.trim()}`;
-
-        fs.writeFileSync(tempFile, content);
-
-        const ragFile = await vertexAIRag.uploadFile(
-          tempFile,
-          item.question.substring(0, 100),
-          item.answer.substring(0, 500)
-        );
-
-        await firebaseService.saveKnowledge({
-          ragFileId: ragFile.name,
+        // Save to Firebase
+        const knowledge = await firebaseService.saveKnowledge({
+          ragFileId: '',
           question: item.question.trim(),
           answer: item.answer.trim(),
           type: 'csv',
-          status: 'COMPLETED',
+          status: 'PROCESSING',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });
 
-        uploadedFiles.push(ragFile);
-        try { fs.unlinkSync(tempFile); } catch (e) { }
+        // Create temp file
+        const tempFile = path.join(RAG_TEMP_DIR, `csv_${Date.now()}_${i}.txt`);
+        const content = `Q: ${item.question.trim()}\n\nA: ${item.answer.trim()}`;
+        fs.writeFileSync(tempFile, content);
+
+        // Queue background upload
+        backgroundTaskService.queueTask('UPLOAD_RAG', knowledge.id, {
+          tempFilePath: tempFile,
+          displayName: item.question.substring(0, 100),
+          description: item.answer.substring(0, 500),
+        });
+
+        queuedItems.push(knowledge);
       } catch (error: any) {
         console.error(`❌ CSV row ${i + 1} error:`, error);
-        errors.push(`Row ${i + 1}: ${error.message}`);
       }
     }
 
     (res as any).status(201).json({
       success: true,
-      message: `Uploaded ${uploadedFiles.length} of ${items.length} items`,
+      message: `Queued ${queuedItems.length} of ${items.length} items for processing`,
       data: {
-        successful: uploadedFiles.length,
-        failed: errors.length,
+        queued: queuedItems.length,
         total: items.length,
-        errors: errors.length > 0 ? errors : undefined
       }
     });
   } catch (error: any) {
@@ -308,7 +291,6 @@ export const uploadCSV = async (req: Request, res: Response): Promise<void> => {
 
 /**
  * POST /api/knowledge/upload/docx
- * UPDATED: No more manual chunking! Let Vertex AI handle it.
  */
 export const uploadDocx = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -322,14 +304,11 @@ export const uploadDocx = async (req: Request, res: Response): Promise<void> => 
     ensureTempDir();
 
     try {
-      // 1. Convert base64 to buffer
       const buffer = Buffer.from(content, 'base64');
-
-      // 2. Save to temp for extraction
       const tempDocxPath = path.join(RAG_TEMP_DIR, `origin_${Date.now()}_${filename}`);
       fs.writeFileSync(tempDocxPath, buffer);
 
-      // 3. Extract text
+      // Extract text
       let extractedText = "";
       try {
         const result = await mammoth.extractRawText({ path: tempDocxPath });
@@ -340,7 +319,7 @@ export const uploadDocx = async (req: Request, res: Response): Promise<void> => 
         throw new Error('Failed to extract text from document');
       }
 
-      // 4. Save metadata to Firebase
+      // Save metadata to Firebase
       const knowledge = await firebaseService.saveKnowledge({
         ragFileId: '',
         question: title || filename,
@@ -351,7 +330,7 @@ export const uploadDocx = async (req: Request, res: Response): Promise<void> => 
         updatedAt: new Date().toISOString(),
       });
 
-      // 5. Upload original file to Firebase Storage
+      // Upload original file to Firebase Storage
       let fileUrl = '';
       try {
         fileUrl = await firebaseService.uploadPdfFile(buffer, filename, knowledge.id);
@@ -364,19 +343,18 @@ export const uploadDocx = async (req: Request, res: Response): Promise<void> => 
         await firebaseService.updateKnowledge(knowledge.id, { fileUrl });
       }
 
-      // 6. Create single .txt file with full extracted content
-      // NO CHUNKING - let Vertex AI do it!
+      // Create full text file (Vertex AI will chunk it)
       const fullTextFile = path.join(RAG_TEMP_DIR, `full_${knowledge.id}.txt`);
       fs.writeFileSync(fullTextFile, extractedText);
 
-      // 7. Queue single upload (Vertex AI will chunk it internally)
+      // Queue upload
       backgroundTaskService.queueTask('UPLOAD_RAG', knowledge.id, {
-        tempFilePath: fullTextFile,  // Single file, not array!
+        tempFilePath: fullTextFile,
         displayName: title || filename.substring(0, 100),
         description: description || `Extracted from: ${filename}`,
       });
 
-      // Clean up temp docx
+      // Clean up
       try { fs.unlinkSync(tempDocxPath); } catch (e) { }
 
       (res as any).status(201).json({
@@ -388,7 +366,7 @@ export const uploadDocx = async (req: Request, res: Response): Promise<void> => 
           filename,
           type: 'docx',
           fileUrl,
-          status: 'PROCESSING', // Will be updated by background task when complete
+          status: 'PROCESSING',
           createdAt: knowledge.createdAt,
         }
       });

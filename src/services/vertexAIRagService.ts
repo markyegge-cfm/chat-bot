@@ -515,6 +515,61 @@ Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
     return 'manual';
   }
 
+  /*
+   * Upload file directly using directUploadSource (JSON)
+   * faster for small files like CSV rows and manual entries
+   */
+  async uploadFileDirect(content: string, displayName: string, description: string): Promise<RagFile> {
+    if (!this.initialized || !this.client) throw new Error('Not initialized');
+
+    const parent = `projects/${this.config.projectId}/locations/${this.config.location}/ragCorpora/${this.config.corpusId}`;
+    const uploadUrl = `https://${this.config.location}-aiplatform.googleapis.com/v1beta1/${parent}/ragFiles:upload`;
+
+    console.log(`📤 Direct Uploading ${displayName}...`);
+
+    try {
+      // Convert content to base64
+      const base64Content = Buffer.from(content).toString('base64');
+
+      const res = await this.client.post(uploadUrl, {
+        ragFile: {
+          displayName: displayName,
+          description: description,
+          directUploadSource: {
+            content: base64Content,
+          },
+        },
+      });
+
+      // Handle response structure (might be nested or flat depending on API version/response)
+      // The user reference shows res.data having proper fields directly or via ragFile
+      const ragFile = res.data.ragFile || res.data;
+
+      // Fallback for ID extraction if name is missing or different
+      const fileId = ragFile.name ? ragFile.name.split('/').pop() : uuidv4();
+      const resourceName = ragFile.name || `${parent}/ragFiles/${fileId}`;
+
+      console.log(`✅ Direct upload success: ${resourceName}`);
+
+      return {
+        id: fileId,
+        name: resourceName,
+        displayName: ragFile.displayName || displayName,
+        description: ragFile.description || description || '',
+        type: 'txt',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        status: 'COMPLETED',
+      };
+    } catch (err: any) {
+      console.error('❌ Direct upload failed:', err.message);
+      if (err.response) {
+        console.error('Response data:', JSON.stringify(err.response.data, null, 2));
+      }
+      throw err;
+    }
+  }
+
   isInitialized(): boolean {
     return this.initialized;
   }

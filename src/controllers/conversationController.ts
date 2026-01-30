@@ -62,4 +62,50 @@ export class ConversationController {
       });
     }
   }
+
+  /**
+   * DELETE /api/conversations/:sessionId
+   */
+  static async deleteConversation(req: Request, res: Response): Promise<void> {
+    try {
+      const sessionId = String(req.params.sessionId);
+      await conversationService.deleteConversation(sessionId);
+      res.json({ success: true, message: 'Conversation deleted' });
+    } catch (error: any) {
+      console.error('Failed to delete conversation:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * POST /api/conversations/batch-delete
+   */
+  static async batchDeleteConversations(req: Request, res: Response): Promise<void> {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        res.status(400).json({ success: false, error: 'No IDs provided' });
+        return;
+      }
+      await conversationService.batchDeleteConversations(ids);
+      res.json({ success: true, message: `Deleted ${ids.length} conversations` });
+    } catch (error: any) {
+      console.error('Failed to batch delete conversations:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * DELETE /api/conversations
+   * Delete ALL conversations (admin action)
+   */
+  static async deleteAllConversations(req: Request, res: Response): Promise<void> {
+    try {
+      await conversationService.deleteAllConversations();
+      res.json({ success: true, message: 'All conversations deleted' });
+    } catch (error: any) {
+      console.error('Failed to delete all conversations:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
 }

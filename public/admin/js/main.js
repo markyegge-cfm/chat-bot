@@ -112,7 +112,7 @@ class AdminApp {
             this.handleRouting();
         } else {
             // Default view
-            window.location.hash = 'conversations';
+            window.location.hash = 'dashboard';
         }
 
         // Setup Mobile Menu
@@ -241,8 +241,8 @@ class AdminApp {
                 ComponentClass = Conversations;
                 break;
             case 'dashboard':
-                contentContainer.innerHTML = '<div class="p-8"><h2 class="text-2xl font-bold">Dashboard</h2><p class="mt-4 text-gray-600">Analytics overview coming soon.</p></div>';
-                return;
+                ComponentClass = Dashboard;
+                break;
             case 'escalations':
                 ComponentClass = Escalations;
                 break;

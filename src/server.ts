@@ -11,6 +11,7 @@ import chatRoutes from './routes/chatRoutes';
 import conversationRoutes from './routes/conversationRoutes';
 import escalationRoutes from './routes/escalationRoutes';
 import knowledgeRoutes from './routes/knowledgeRoutes';
+import statsRoutes from './routes/statsRoutes';
 import vertexAIRag from './services/vertexAIRagService';
 
 const app: any = express();
@@ -67,6 +68,7 @@ app.use(chatRoutes);
 app.use(knowledgeRoutes);
 app.use('/api', conversationRoutes);
 app.use('/api', escalationRoutes);
+app.use(statsRoutes);
 
 // ============================================
 // 404 HANDLER
