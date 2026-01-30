@@ -1,6 +1,5 @@
 import { MemorySaver, StateGraph } from '@langchain/langgraph';
 import type { Request, Response } from 'express';
-// import conversationService from '../services/conversationService'; // Using firebaseService directly
 import firebaseService from '../services/firebaseService';
 import { FALLBACK_MESSAGE, vertexAIRag } from '../services/vertexAIRagService';
 
@@ -193,6 +192,30 @@ function extractEmail(text: string): string | null {
   return match ? match[0] : null;
 }
 
+/**
+ * Stream text with realistic typing speed
+ * Sends chunks character by character with slight delays for smooth animation
+ */
+async function streamTextToResponse(res: Response, text: string, metadata: { isCached: boolean; sessionId: string }) {
+  // Stream in smaller chunks for smoother animation
+  const words = text.split(' ');
+  
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const chunk = i === words.length - 1 ? word : word + ' ';
+    
+    res.write(`data: ${JSON.stringify({
+      chunk,
+      ...metadata
+    })}\n\n`);
+
+    // Add small delay between words for realistic typing effect
+    // Faster for cached responses, slower for generated ones
+    const delay = metadata.isCached ? 15 : 30;
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+}
+
 export class ChatController {
 
   static async handleMessage(req: Request, res: Response): Promise<void> {
@@ -206,6 +229,13 @@ export class ChatController {
     console.log(`\n=== New Chat Request ===`);
     console.log(`Session: ${sessionId}`);
     console.log(`Message: ${message.substring(0, 100)}...`);
+
+    // Set up SSE headers immediately
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+    res.flushHeaders(); // Flush headers to establish connection
 
     try {
       // Initialize services if needed
@@ -236,14 +266,9 @@ export class ChatController {
         // Fetch recent conversation history to see if the bot asked for it
         const history = await firebaseService.getConversationMessages(sessionId);
 
-        // We look for the pattern: 
-        // 1. User asks question (Question to escalate)
-        // 2. Bot replies with FALLBACK_MESSAGE (or similar)
-        // 3. User replies with Email (Current message)
-
         if (history.length >= 2) {
-          const lastBotMsg = history[history.length - 1]; // The message before current one should be bot
-          const prevUserMsg = history[history.length - 2]; // The message before that was the question
+          const lastBotMsg = history[history.length - 1];
+          const prevUserMsg = history[history.length - 2];
 
           // Check if the last bot message was the fallback prompt
           if (lastBotMsg.sender === 'assistant' &&
@@ -275,7 +300,7 @@ export class ChatController {
               console.error('📧 Failed to trigger email notification:', mailError);
             }
 
-            // Send confirmation response immediately
+            // Send confirmation response with streaming
             const confirmationMsg = "Thank you! We've created a support ticket for your issue. Our team will review it and contact you shortly via email.";
 
             // Ensure session exists before adding messages
@@ -294,18 +319,10 @@ export class ChatController {
             await firebaseService.addMessage(sessionId, 'assistant', confirmationMsg);
 
             // Stream the response
-            res.setHeader('Content-Type', 'text/event-stream');
-            res.setHeader('Cache-Control', 'no-cache');
-            res.setHeader('Connection', 'keep-alive');
-
-            res.write(`data: ${JSON.stringify({
-              chunk: confirmationMsg,
-              isCached: false,
-              sessionId
-            })}\n\n`);
+            await streamTextToResponse(res, confirmationMsg, { isCached: false, sessionId });
             res.write('data: [DONE]\n\n');
             res.end();
-            return; // Stop further processing
+            return;
           }
         }
       }
@@ -343,24 +360,8 @@ export class ChatController {
 
       console.log(`Generated answer (cached: ${isCached}): ${answer.substring(0, 100)}...`);
 
-      // Set up SSE headers
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-
-      // Stream the response in chunks
-      const chunkSize = 100;
-      for (let i = 0; i < answer.length; i += chunkSize) {
-        const chunk = answer.slice(i, i + chunkSize);
-        res.write(`data: ${JSON.stringify({
-          chunk,
-          isCached,
-          sessionId
-        })}\n\n`);
-
-        // Add a small delay for streaming effect
-        await new Promise(resolve => setTimeout(resolve, 10));
-      }
+      // Stream the response with realistic typing animation
+      await streamTextToResponse(res, answer, { isCached, sessionId });
 
       res.write('data: [DONE]\n\n');
       res.end();
@@ -368,7 +369,6 @@ export class ChatController {
       // Save user message and bot response to conversation session (async, non-blocking)
       try {
         // Create conversation session if it doesn't exist
-        // Note: Using firebaseService instead of conversationService to ensure availability
         const existingSession = await firebaseService.getConversation(sessionId);
         if (!existingSession) {
           await firebaseService.startConversation(sessionId, 'anonymous');
@@ -389,16 +389,10 @@ export class ChatController {
     } catch (error: any) {
       console.error('Error in chat controller:', error);
 
-      // Send error as SSE
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-
       const errorMessage = error.message || 'An error occurred. Please try again later.';
-      res.write(`data: ${JSON.stringify({
-        error: errorMessage,
-        sessionId
-      })}\n\n`);
+      
+      // Stream error message
+      await streamTextToResponse(res, errorMessage, { isCached: false, sessionId });
       res.write('data: [DONE]\n\n');
       res.end();
     }

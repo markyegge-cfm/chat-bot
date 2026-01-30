@@ -9,7 +9,7 @@ class Sidebar {
         <!-- Header / Logo -->
         <div class="sidebar-header">
           <div class="logo-container">
-            <img src="../image/Group 1437254357.png" alt="ChatBot" class="sidebar-logo">
+            <img src="../image/image copy.png" alt="ChatBot" class="sidebar-logo">
           </div>
         </div>
 

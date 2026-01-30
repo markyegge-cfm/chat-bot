@@ -5,6 +5,7 @@ class KnowledgeBase {
    static itemsPerPage = 8;
    static currentSortType = 'all'; // Default sort/filter type
    static selectedIds = new Set();
+   static isBatchDelete = false;
 
    static render() {
       return `
@@ -128,7 +129,7 @@ class KnowledgeBase {
               <span class="text-[14px] font-medium">items selected</span>
            </div>
            <div class="flex items-center gap-2">
-              <button id="kb-bulk-delete" class="flex items-center gap-2 px-4 py-2 hover:bg-red-500/10 text-red-400 rounded-lg transition-colors text-[14px] font-semibold">
+              <button id="kb-bulk-delete" class="flex items-center gap-2 px-4 py-2 hover:bg-red-500/10 text-red-400 rounded-lg transition-colors text-[14px] font-semibold disabled:text-gray-400 disabled:cursor-not-allowed disabled:hover:bg-transparent">
                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="3 6 5 6 21 6"></polyline>
                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -330,7 +331,7 @@ class KnowledgeBase {
             <button class="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2" data-action="delete">
                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>
                </svg>
                Delete
             </button>
@@ -552,12 +553,13 @@ class KnowledgeBase {
    }
 
    static injectModal() {
+      // Removed animation classes: transition-opacity, duration-300, opacity-0, scale-95
       const modalHtml = `
-      <div id="add-modal" class="fixed inset-0 z-[100] hidden transition-opacity duration-300 opacity-0" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div id="add-modal" class="fixed inset-0 z-[100] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <div id="modal-backdrop" class="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div>
 
         <div id="modal-container" class="absolute inset-0 z-10 overflow-y-auto flex items-center justify-center p-4">
-            <div id="modal-panel" class="relative transform overflow-hidden rounded-[24px] bg-white text-left shadow-2xl transition-all w-full max-w-[600px] scale-95 opacity-0 duration-300 p-8">
+            <div id="modal-panel" class="relative overflow-hidden rounded-[24px] bg-white text-left shadow-2xl w-full max-w-[600px] p-8">
               <button id="modal-close-btn" class="absolute right-8 top-8 text-gray-400 hover:text-gray-600 transition-colors z-20">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                    <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -681,7 +683,7 @@ class KnowledgeBase {
 
                  <div class="mt-6 flex gap-3">
                     <button id="pdf-cancel-btn" class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold transition-colors text-[14px]">Cancel</button>
-                    <button id="btn-pdf-upload" disabled class="flex-1 px-4 py-2.5 bg-[#E5A000] hover:bg-[#D49000] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors text-[14px]">Upload DOCX</button>
+                    <button id="btn-pdf-upload" disabled class="flex-1 px-4 py-2.5 bg-[#E5A000] hover:bg-[#D49000] disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors text-[14px]">Upload DOCX</button>
                  </div>
               </div>
 
@@ -748,7 +750,7 @@ class KnowledgeBase {
 
                  <div class="flex items-center gap-4 mt-8">
                     <button id="btn-csv-cancel" class="flex-1 py-3.5 rounded-full border border-gray-200 text-[15px] font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">Cancel</button>
-                    <button id="btn-csv-upload" class="flex-1 py-3.5 rounded-full text-[15px] font-bold text-white bg-[#E5A000] hover:bg-[#D49000] shadow-sm transition-all shadow-[#E5A000]/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Upload CSV</button>
+                    <button id="btn-csv-upload" class="flex-1 py-3.5 rounded-full text-[15px] font-bold text-white bg-[#E5A000] hover:bg-[#D49000] shadow-sm transition-all shadow-[#E5A000]/20 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none" disabled>Upload CSV</button>
                  </div>
               </div>
 
@@ -774,7 +776,7 @@ class KnowledgeBase {
 
                  <div class="flex items-center gap-4 mt-8">
                     <button id="btn-manual-cancel" class="flex-1 py-3.5 rounded-full border border-gray-200 text-[15px] font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">Cancel</button>
-                    <button id="btn-manual-submit" class="flex-1 py-3.5 rounded-full text-[15px] font-bold text-white bg-[#E5A000] hover:bg-[#D49000] shadow-sm transition-all shadow-[#E5A000]/20">Confirm</button>
+                    <button id="btn-manual-submit" class="flex-1 py-3.5 rounded-full text-[15px] font-bold text-white bg-[#E5A000] hover:bg-[#D49000] shadow-sm transition-all shadow-[#E5A000]/20 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none">Confirm</button>
                  </div>
               </div>
 
@@ -802,7 +804,7 @@ class KnowledgeBase {
 
                  <div class="flex items-center gap-4 mt-8">
                     <button id="btn-edit-cancel" class="flex-1 py-3.5 rounded-full border border-gray-200 text-[15px] font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">Cancel</button>
-                    <button id="btn-edit-submit" class="flex-1 py-3.5 rounded-full text-[15px] font-bold text-white bg-[#E5A000] hover:bg-[#D49000] shadow-sm transition-all shadow-[#E5A000]/20">Save Changes</button>
+                    <button id="btn-edit-submit" class="flex-1 py-3.5 rounded-full text-[15px] font-bold text-white bg-[#E5A000] hover:bg-[#D49000] shadow-sm transition-all shadow-[#E5A000]/20 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none">Save Changes</button>
                  </div>
               </div>
 
@@ -817,7 +819,7 @@ class KnowledgeBase {
                  <p class="text-[15px] text-gray-500 mb-8 px-4">This action cannot be undone. This item will be permanently removed from your knowledge base.</p>
                  <div class="flex items-center gap-4">
                     <button id="btn-delete-cancel" class="flex-1 py-4 rounded-full border border-gray-200 text-[15px] font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">No, keep it</button>
-                    <button id="btn-delete-confirm" class="flex-1 py-4 rounded-full text-[15px] font-bold text-white bg-red-500 hover:bg-red-600 shadow-sm transition-all shadow-red-500/20">Yes, delete</button>
+                    <button id="btn-delete-confirm" class="flex-1 py-4 rounded-full text-[15px] font-bold text-white bg-red-500 hover:bg-red-600 shadow-sm transition-all shadow-red-500/20 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none">Yes, delete</button>
                  </div>
               </div>
 
@@ -894,39 +896,32 @@ class KnowledgeBase {
 
       const openModal = () => {
          modal.classList.remove('hidden');
-         setTimeout(() => {
-            modal.classList.remove('opacity-0');
-            modalPanel.classList.remove('scale-95', 'opacity-0');
-            modalPanel.classList.add('scale-100', 'opacity-100');
-         }, 10);
+         // Instant open, no animation delay or transition classes
       };
 
       const closeModal = () => {
-         modal.classList.add('opacity-0');
-         modalPanel.classList.remove('scale-100', 'opacity-100');
-         modalPanel.classList.add('scale-95', 'opacity-0');
-         setTimeout(() => {
-            modal.classList.add('hidden');
-            [viewSelection, viewManual, viewCsv, viewPdf, viewEdit, viewDelete].forEach(v => v.classList.add('hidden'));
-            viewSelection.classList.remove('hidden');
+         modal.classList.add('hidden');
+         // Instant close and reset
+         [viewSelection, viewManual, viewCsv, viewPdf, viewEdit, viewDelete].forEach(v => v.classList.add('hidden'));
+         viewSelection.classList.remove('hidden');
 
-            // Reset fields
-            if (manualQuestionInput) manualQuestionInput.value = '';
-            if (manualAnswerInput) manualAnswerInput.value = '';
-            if (editQuestionInput) editQuestionInput.value = '';
-            if (editAnswerInput) editAnswerInput.value = '';
-            if (pdfTitleInput) pdfTitleInput.value = '';
-            if (pdfDescriptionInput) pdfDescriptionInput.value = '';
+         // Reset fields
+         if (manualQuestionInput) manualQuestionInput.value = '';
+         if (manualAnswerInput) manualAnswerInput.value = '';
+         if (editQuestionInput) editQuestionInput.value = '';
+         if (editAnswerInput) editAnswerInput.value = '';
+         if (pdfTitleInput) pdfTitleInput.value = '';
+         if (pdfDescriptionInput) pdfDescriptionInput.value = '';
 
-            selectedCsvFile = null;
-            selectedPdfFile = null;
-            if (csvFilePreview) csvFilePreview.classList.add('hidden');
-            if (pdfFilePreview) pdfFilePreview.classList.add('hidden');
-            if (btnCsvUpload) btnCsvUpload.disabled = true;
-            if (btnPdfUpload) btnPdfUpload.disabled = true;
-            editingItemId = null;
-            this.pendingDeleteId = null;
-         }, 300);
+         selectedCsvFile = null;
+         selectedPdfFile = null;
+         if (csvFilePreview) csvFilePreview.classList.add('hidden');
+         if (pdfFilePreview) pdfFilePreview.classList.add('hidden');
+         if (btnCsvUpload) btnCsvUpload.disabled = true;
+         if (btnPdfUpload) btnPdfUpload.disabled = true;
+         editingItemId = null;
+         this.pendingDeleteId = null;
+         this.isBatchDelete = false;
       };
 
       const showView = (viewToShow) => {
@@ -1244,31 +1239,35 @@ class KnowledgeBase {
       };
 
       const confirmDelete = async () => {
-         if (!this.pendingDeleteId) return;
+         if (!this.pendingDeleteId && !this.isBatchDelete) return;
 
          try {
             btnDeleteConfirm.disabled = true;
             btnDeleteConfirm.textContent = 'Deleting...';
 
-            const response = await fetch(`/api/knowledge/${this.pendingDeleteId}`, {
-               method: 'DELETE'
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
+            if (this.isBatchDelete) {
+               await this.deleteSelected();
                closeModal();
-               this.showToast('Knowledge item deleted successfully', 'success');
-               await this.loadDocuments();
             } else {
-               throw new Error(result.error || 'Failed to delete');
+               const response = await fetch(`/api/knowledge/${this.pendingDeleteId}`, {
+                  method: 'DELETE'
+               });
+               const result = await response.json();
+
+               if (result.success) {
+                  closeModal();
+                  this.showToast('Knowledge item deleted successfully', 'success');
+                  await this.loadDocuments();
+               } else {
+                  throw new Error(result.error || 'Failed to delete');
+               }
             }
          } catch (error) {
             console.error('Delete failed:', error);
-            this.showToast('Failed to delete knowledge item', 'error');
+            this.showToast(this.isBatchDelete ? 'Failed to delete selected items' : 'Failed to delete knowledge item', 'error');
          } finally {
             btnDeleteConfirm.disabled = false;
-            btnDeleteConfirm.textContent = 'Delete';
+            btnDeleteConfirm.textContent = 'Yes, delete';
          }
       };
 
@@ -1370,7 +1369,19 @@ class KnowledgeBase {
          showView(viewEdit);
       };
 
-      KnowledgeBase.openDeleteModal = () => {
+      KnowledgeBase.openDeleteModal = (isBatch = false) => {
+         this.isBatchDelete = isBatch;
+         const titleEl = document.querySelector('#modal-view-delete h3');
+         const textEl = document.querySelector('#modal-view-delete p');
+
+         if (isBatch) {
+            if (titleEl) titleEl.textContent = `Delete ${this.selectedIds.size} Items?`;
+            if (textEl) textEl.textContent = `These ${this.selectedIds.size} items will be permanently removed from your knowledge base.`;
+         } else {
+            if (titleEl) titleEl.textContent = 'Delete Knowledge?';
+            if (textEl) textEl.textContent = 'This action cannot be undone. This item will be permanently removed from your knowledge base.';
+         }
+
          openModal();
          showView(viewDelete);
       };
@@ -1414,9 +1425,7 @@ class KnowledgeBase {
 
       if (bulkDeleteBtn) {
          bulkDeleteBtn.addEventListener('click', () => {
-            if (confirm(`Are you sure you want to delete ${this.selectedIds.size} selected items?`)) {
-               this.deleteSelected();
-            }
+            this.openDeleteModal(true);
          });
       }
 
