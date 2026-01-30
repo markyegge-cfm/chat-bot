@@ -27,8 +27,8 @@ interface RagCorpusConfig {
 
 /**
  * Service responsible for interacting with Google Cloud Vertex AI to perform RAG (Retrieval-Augmented Generation).
- * 
- * IMPORTANT: Uses ImportFiles API with GCS staging, NOT the unreliable direct upload endpoint.
+ * * IMPORTANT: Uses ImportFiles API with GCS staging.
+ * UPDATE: Now preserves GCS files to ensure RAG source validity.
  */
 class VertexAIRagService {
   private config: RagCorpusConfig;
@@ -68,8 +68,7 @@ class VertexAIRagService {
   /**
    * Sets up the Google Auth client and resolves the Corpus ID.
    * This MUST be called before any other operation.
-   * 
-   * NOTE: Storage bucket is initialized lazily on first upload to avoid Firebase dependency during init
+   * * NOTE: Storage bucket is initialized lazily on first upload to avoid Firebase dependency during init
    */
   async initialize(): Promise<void> {
     if (!this.config.projectId || (!this.config.corpusName && !process.env.RESOURCE_NAME)) {
@@ -144,13 +143,12 @@ class VertexAIRagService {
 
   /**
    * Upload a file using the CORRECT method: GCS Import API
-   * 
-   * This method:
-   * 1. Uploads file to GCS staging bucket
-   * 2. Calls ImportFiles API (not the broken upload endpoint)
-   * 3. Waits for async indexing to complete
-   * 4. Cleans up temp file
-   * 5. Returns indexed file metadata
+   * * This method:
+   * 1. Uploads file to GCS (Permanent location)
+   * 2. Calls ImportFiles API
+   * 3. Returns indexed file metadata
+   * * CHANGED: We no longer delete the GCS file after import. Vertex AI RAG references the
+   * GCS Source URI, so the file must persist.
    */
   async uploadFile(filePath: string, displayName?: string, description?: string): Promise<RagFile> {
     if (!this.initialized || !this.client) {
@@ -162,9 +160,10 @@ class VertexAIRagService {
 
     console.log(`📤 Uploading file via GCS Import: ${filePath}`);
 
-    // Step 1: Upload to GCS staging bucket
+    // Step 1: Upload to GCS
     const timestamp = Date.now();
-    const gcsPath = `rag-staging/${timestamp}_${path.basename(filePath)}`;
+    // CHANGED: Use 'rag-content' instead of 'rag-staging' to imply persistence
+    const gcsPath = `rag-content/${timestamp}_${path.basename(filePath)}`;
 
     try {
       await this.storageBucket.upload(filePath, {
@@ -202,20 +201,16 @@ class VertexAIRagService {
       // Step 3: Poll operation status until complete
       const ragFile = await this.waitForImportOperation(importResponse.data.name, displayName || path.basename(filePath));
 
-      // Step 4: Clean up GCS staging file
-      try {
-        await this.storageBucket.file(gcsPath).delete();
-        console.log(`🗑️  Deleted GCS staging file: ${gcsPath}`);
-      } catch (e) {
-        console.warn(`⚠️  Could not delete GCS staging file: ${e}`);
-      }
+      // CHANGED: Removed GCS cleanup step. The file is preserved.
+      console.log(`💾 GCS file preserved at: ${gcsPath}`);
 
       return ragFile;
 
     } catch (error: any) {
-      // Clean up GCS file on error
+      // Clean up GCS file ONLY on error. If upload succeeded, we must keep it.
       try {
         await this.storageBucket.file(gcsPath).delete();
+        console.log(`🗑️  Cleaned up failed upload: ${gcsPath}`);
       } catch (e) { }
 
       console.error('❌ Upload/Import failed:', error.message);
@@ -295,7 +290,6 @@ class VertexAIRagService {
             }
 
             // If import succeeded but no files listed, create a placeholder entry
-            // This can happen if Vertex AI processes the file but doesn't return details
             const placeholderId = uuidv4();
             const fullResourceName = `projects/${this.config.projectId}/locations/${this.config.location}/ragCorpora/${this.config.corpusId}/ragFiles/${placeholderId}`;
 
@@ -364,12 +358,15 @@ class VertexAIRagService {
 
 **Greeting Handling**: Respond warmly to greetings. For "Hi", "Hello", etc., say "Hi there! 👋 How can I help you today?"
 
-**Knowledge Base Answers**: Provide clear, accurate answers based on knowledge base information. Be professional and courteous.
+**Knowledge Base Answers**: The knowledge base consists of Question and Answer pairs. When a user asks a question that matches a Q&A pair, provide the **complete and exact answer** found in the context.
+- Do NOT summarize, shorten, or paraphrase the answer.
+- If the answer contains steps, bullet points, links, or detailed explanations, include ALL of them exactly as they appear.
+- Your priority is accuracy and completeness based on the retrieved context.
 
 **Email Collection**: If you cannot find the answer in the knowledge base, acknowledge the question professionally and politely ask for their email.
 Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
 
-**Tone**: Professional yet friendly, clear and concise, empathetic. Keep responses to 1-4 sentences.
+**Tone**: Professional yet friendly, clear, and empathetic.
 
 **Follow-up Questions**: After providing the answer, suggest 2-3 short, relevant follow-up questions the user might ask next. Format them exactly like this at the end of your response:
 <<<FOLLOWUP: Question 1 | Question 2 | Question 3>>>`;
@@ -392,7 +389,7 @@ Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
           temperature: 0.7,
           topP: 0.95,
           topK: 40,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 2048, // Increased token limit for longer answers
         },
       });
 
