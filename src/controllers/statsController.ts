@@ -12,14 +12,17 @@ export class StatsController {
       const conversationCount = await firebaseService.getConversationCount();
       const escalations = await firebaseService.getAllEscalations();
 
+      // Count only open escalations (not resolved) for the warning badge
+      const openEscalations = escalations.filter(esc => esc.status === 'open');
+
       res.json({
         success: true,
         data: {
           knowledge: knowledgeStats,
           conversations: { total: conversationCount },
           escalations: {
-            total: escalations.length,
-            items: escalations // Include items for trend graph
+            total: openEscalations.length, // Only count open escalations
+            items: escalations // Include all items for trend graph
           }
         }
       });

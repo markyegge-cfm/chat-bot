@@ -32,18 +32,12 @@
       <div class="chatbot-window" id="chatbot-window" style="display: none;">
         <div class="chatbot-header">
           <div class="header-left">
-            <button class="icon-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-            </button>
-            <div class="header-logo">
-              <img src="/image/vectorized%20(7)%202.png" alt="Logo" style="width: 36px; height: 36px; object-fit: contain;">
+            <div>
+              <img src="/image/image copy.png" alt="Logo" style="width: 100px; height: 100px; object-fit: contain;">
             </div>
             <span class="header-title">Chat bot</span>
           </div>
           <div class="header-right">
-            <button class="icon-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 7 12 4 15 7"></polyline><polyline points="9 17 12 20 15 17"></polyline><line x1="12" y1="4" x2="12" y2="20"></line></svg>
-            </button>
             <button class="icon-btn" id="chatbot-close">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
@@ -52,8 +46,10 @@
 
         <div class="chatbot-messages" id="chatbot-messages">
           <div class="chat-intro-text">Welcome to our Website! Ask us anything.</div>
-          <div class="chatbot-message bot-message">
-            <p>Hi! How can I support you today?</p>
+          <div class="chatbot-message bot-message" id="initial-greeting">
+            <div class="message-content">
+              <p>Hi! How can I support you today?</p>
+            </div>
           </div>
           <div class="suggestion-chips" id="initial-suggestions">
             <button class="suggestion-chip" onclick="window.sendSuggestion('Learn About Our Courses')">1. Learn About Our Courses</button>
@@ -113,7 +109,7 @@
       .chatbot-window {
         width: 410px;
         height: 705px;
-        max-height: calc(100vh - 120px); /* Responsive fix for desktop */
+        max-height: calc(100vh - 120px);
         background: #FFFFFF;
         box-shadow: 0 12px 48px rgba(0,0,0,0.12);
         border-radius: 24px 24px 32px 32px;
@@ -171,14 +167,94 @@
       .chatbot-message { max-width: 85%; }
       .chatbot-message p {
         font-size: 14.5px;
-        line-height: 1.4;
+        line-height: 1.6;
         padding: 12px 18px;
         margin: 0;
         white-space: pre-wrap;
       }
 
+      /* Markdown styling for bot messages */
+      .bot-message .message-content {
+        background: #F3F3F3;
+        color: #1a1a1a;
+        border-radius: 20px 20px 20px 4px;
+        padding: 12px 18px;
+      }
+
+      .bot-message .message-content h1,
+      .bot-message .message-content h2,
+      .bot-message .message-content h3 {
+        margin: 12px 0 8px 0;
+        font-weight: 700;
+        color: #111;
+      }
+
+      .bot-message .message-content h1 { font-size: 18px; }
+      .bot-message .message-content h2 { font-size: 16px; }
+      .bot-message .message-content h3 { font-size: 15px; }
+
+      .bot-message .message-content p {
+        margin: 8px 0;
+        padding: 0;
+        background: transparent;
+        color: #1a1a1a;
+        line-height: 1.6;
+      }
+
+      .bot-message .message-content ul,
+      .bot-message .message-content ol {
+        margin: 8px 0;
+        padding-left: 24px;
+      }
+
+      .bot-message .message-content li {
+        margin: 4px 0;
+        line-height: 1.6;
+      }
+
+      .bot-message .message-content strong {
+        font-weight: 700;
+        color: #111;
+      }
+
+      .bot-message .message-content em {
+        font-style: italic;
+      }
+
+      .bot-message .message-content code {
+        background: #e0e0e0;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+      }
+
+      .bot-message .message-content pre {
+        background: #e0e0e0;
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 8px 0;
+      }
+
+      .bot-message .message-content pre code {
+        background: transparent;
+        padding: 0;
+      }
+
+      .bot-message .message-content a {
+        color: #D59800;
+        text-decoration: underline;
+      }
+
+      .bot-message .message-content blockquote {
+        border-left: 3px solid #D59800;
+        padding-left: 12px;
+        margin: 8px 0;
+        color: #555;
+      }
+
       .bot-message { align-self: flex-start; }
-      .bot-message p { background: #F3F3F3; color: #1a1a1a; border-radius: 20px 20px 20px 4px; }
 
       .user-message { align-self: flex-end; }
       .user-message p { background: #D59800; color: white; border-radius: 20px 20px 4px 20px; }
@@ -188,6 +264,41 @@
         color: #8E8E8E;
         margin-top: 6px;
         padding-left: 4px;
+      }
+
+      /* Typing indicator animation */
+      .typing-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 8px 12px;
+      }
+
+      .typing-dot {
+        width: 6px;
+        height: 6px;
+        background: #666;
+        border-radius: 50%;
+        animation: typing 1.4s infinite;
+      }
+
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes typing {
+        0%, 60%, 100% {
+          opacity: 0.3;
+          transform: scale(0.8);
+        }
+        30% {
+          opacity: 1;
+          transform: scale(1);
+        }
       }
 
       .chatbot-input-container {
@@ -351,9 +462,10 @@
         initialSuggestions.remove();
       }
 
-      // Placeholder for streaming bot response
-      const { textNode, metadataNode } = addStreamingMessage();
+      // Add typing indicator
+      const typingIndicator = addTypingIndicator();
       let fullResponse = "";
+      let botMessageElement = null;
 
       try {
         const response = await fetch('/api/chat', {
@@ -366,79 +478,110 @@
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let buffer = '';
 
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
 
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const dataStr = line.replace('data: ', '').trim();
-              if (!dataStr || dataStr === '[DONE]') continue;
+            if (!line.trim() || !line.startsWith('data: ')) continue;
+            
+            const dataStr = line.replace('data: ', '').trim();
+            if (!dataStr || dataStr === '[DONE]') continue;
 
-              try {
-                const parsed = JSON.parse(dataStr);
+            try {
+              const parsed = JSON.parse(dataStr);
 
-                // Handle streaming chunks - the format is { chunk: "text" }
-                if (parsed.chunk) {
-                  fullResponse += parsed.chunk;
-                  textNode.innerText = fullResponse;
-                  const messagesContainer = document.getElementById('chatbot-messages');
-                  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+              if (parsed.chunk) {
+                // Remove typing indicator on first chunk
+                if (typingIndicator && typingIndicator.parentNode) {
+                  typingIndicator.remove();
                 }
 
-                // Handle errors
-                if (parsed.error) {
-                  textNode.innerText = parsed.error;
+                fullResponse += parsed.chunk;
+
+                // Create or update bot message element
+                if (!botMessageElement) {
+                  botMessageElement = addStreamingBotMessage();
                 }
-              } catch (e) {
-                console.debug('Parse error:', e);
+
+                // Update the message content with markdown rendering
+                updateMessageContent(botMessageElement, fullResponse);
+                
+                // Auto-scroll
+                const messagesContainer = document.getElementById('chatbot-messages');
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
               }
+
+              if (parsed.error) {
+                if (typingIndicator && typingIndicator.parentNode) {
+                  typingIndicator.remove();
+                }
+                if (botMessageElement) {
+                  updateMessageContent(botMessageElement, parsed.error);
+                } else {
+                  addMessage(parsed.error, 'bot');
+                }
+              }
+            } catch (e) {
+              console.debug('Parse error:', e);
             }
           }
         }
 
-        // Parse Follow-up Questions
-        const followupMatch = fullResponse.match(/<<<FOLLOWUP: (.*?)>>>/);
-        if (followupMatch) {
-          fullResponse = fullResponse.replace(followupMatch[0], '').trim();
-          textNode.innerText = fullResponse; // Clean text
-
-          const questions = followupMatch[1].split('|').map(q => q.trim());
-          if (questions.length > 0) {
-            const followupContainer = document.createElement('div');
-            followupContainer.className = 'bot-followup-container';
-
-            questions.forEach(q => {
-              const btn = document.createElement('button');
-              btn.className = 'followup-chip';
-              btn.innerText = q;
-              btn.onclick = () => window.sendSuggestion(q);
-              followupContainer.appendChild(btn);
-            });
-
-            // Append to the message container (not inside the p tag)
-            // textNode.parentNode is the msgDiv
-            textNode.parentNode.appendChild(followupContainer);
-            const messagesContainer = document.getElementById('chatbot-messages');
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-          }
+        // Final processing
+        if (typingIndicator && typingIndicator.parentNode) {
+          typingIndicator.remove();
         }
 
-        // Final update with timestamp
-        metadataNode.innerText = `AI Agent • ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        if (!botMessageElement && !fullResponse) {
+          addMessage('Sorry, I could not generate a response.', 'bot');
+        }
 
-        // Replace placeholder message with final response if empty
-        if (!fullResponse) {
-          textNode.innerText = 'Sorry, I could not generate a response.';
+        // Parse Follow-up Questions
+        if (fullResponse && botMessageElement) {
+          const followupMatch = fullResponse.match(/<<<FOLLOWUP: (.*?)>>>/);
+          if (followupMatch) {
+            fullResponse = fullResponse.replace(followupMatch[0], '').trim();
+            updateMessageContent(botMessageElement, fullResponse);
+
+            const questions = followupMatch[1].split('|').map(q => q.trim()).filter(q => q);
+            if (questions.length > 0) {
+              const followupContainer = document.createElement('div');
+              followupContainer.className = 'bot-followup-container';
+
+              questions.forEach(q => {
+                const btn = document.createElement('button');
+                btn.className = 'followup-chip';
+                btn.innerText = q;
+                btn.onclick = () => window.sendSuggestion(q);
+                followupContainer.appendChild(btn);
+              });
+
+              botMessageElement.appendChild(followupContainer);
+              const messagesContainer = document.getElementById('chatbot-messages');
+              messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+          }
+
+          // Update metadata with timestamp
+          const metadataNode = botMessageElement.querySelector('.message-metadata');
+          if (metadataNode) {
+            metadataNode.innerText = `AI Agent • ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+          }
         }
 
       } catch (error) {
         console.error('Error sending message:', error);
-        textNode.innerText = "Sorry, I'm having trouble connecting. Please try again later.";
+        if (typingIndicator && typingIndicator.parentNode) {
+          typingIndicator.remove();
+        }
+        addMessage("Sorry, I'm having trouble connecting. Please try again later.", 'bot');
       } finally {
         sendBtn.disabled = false;
         input.focus();
@@ -466,34 +609,125 @@
     msgDiv.className = `chatbot-message ${sender}-message`;
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    let html = `<p>${text}</p>`;
     if (sender === 'bot') {
-      html += `<div class="message-metadata">AI Agent • ${time}</div>`;
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'message-content';
+      contentDiv.innerHTML = parseMarkdown(text);
+      
+      const metadata = document.createElement('div');
+      metadata.className = 'message-metadata';
+      metadata.innerText = `AI Agent • ${time}`;
+
+      msgDiv.appendChild(contentDiv);
+      msgDiv.appendChild(metadata);
+    } else {
+      const p = document.createElement('p');
+      p.innerText = text;
+      msgDiv.appendChild(p);
     }
 
-    msgDiv.innerHTML = html;
     messagesContainer.appendChild(msgDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    return msgDiv;
   }
 
-  function addStreamingMessage() {
+  function addTypingIndicator() {
+    const messagesContainer = document.getElementById('chatbot-messages');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'chatbot-message bot-message';
+    msgDiv.id = 'typing-indicator';
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    contentDiv.innerHTML = '<div class="typing-indicator"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>';
+
+    msgDiv.appendChild(contentDiv);
+    messagesContainer.appendChild(msgDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    return msgDiv;
+  }
+
+  function addStreamingBotMessage() {
     const messagesContainer = document.getElementById('chatbot-messages');
     const msgDiv = document.createElement('div');
     msgDiv.className = 'chatbot-message bot-message';
 
-    const p = document.createElement('p');
-    p.innerText = '...';
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    contentDiv.innerHTML = '';
 
     const metadata = document.createElement('div');
     metadata.className = 'message-metadata';
     metadata.innerText = 'AI Agent • typing...';
 
-    msgDiv.appendChild(p);
+    msgDiv.appendChild(contentDiv);
     msgDiv.appendChild(metadata);
     messagesContainer.appendChild(msgDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-    return { textNode: p, metadataNode: metadata };
+    return msgDiv;
+  }
+
+  function updateMessageContent(messageElement, text) {
+    const contentDiv = messageElement.querySelector('.message-content');
+    if (contentDiv) {
+      contentDiv.innerHTML = parseMarkdown(text);
+    }
+  }
+
+  /**
+   * Simple markdown parser for common patterns
+   */
+  function parseMarkdown(text) {
+    // Escape HTML first
+    text = text.replace(/&/g, '&amp;')
+               .replace(/</g, '&lt;')
+               .replace(/>/g, '&gt;');
+
+    // Headers
+    text = text.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+    text = text.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
+    text = text.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
+
+    // Bold
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    text = text.replace(/__(.*?)__/g, '<strong>$1</strong>');
+
+    // Italic
+    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    text = text.replace(/_(.*?)_/g, '<em>$1</em>');
+
+    // Code blocks
+    text = text.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+
+    // Inline code
+    text = text.replace(/`(.*?)`/g, '<code>$1</code>');
+
+    // Links
+    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+    // Unordered lists
+    text = text.replace(/^\* (.*?)$/gm, '<li>$1</li>');
+    text = text.replace(/^- (.*?)$/gm, '<li>$1</li>');
+    text = text.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+
+    // Ordered lists
+    text = text.replace(/^\d+\. (.*?)$/gm, '<li>$1</li>');
+
+    // Blockquotes
+    text = text.replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>');
+
+    // Line breaks
+    text = text.replace(/\n\n/g, '</p><p>');
+    text = text.replace(/\n/g, '<br>');
+
+    // Wrap in paragraphs if not already in block element
+    if (!text.match(/^<(h[1-6]|ul|ol|pre|blockquote)/)) {
+      text = '<p>' + text + '</p>';
+    }
+
+    return text;
   }
 
   initChatbot();

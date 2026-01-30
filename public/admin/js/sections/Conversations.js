@@ -8,6 +8,7 @@ class Conversations {
    static itemsPerPage = 20;
    static totalItems = 0;
    static totalPages = 1;
+   static dateFilter = 'all';
 
    static render() {
       return `
@@ -25,6 +26,25 @@ class Conversations {
                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                   </svg>
                   <input type="text" id="conv-search" placeholder="Search current page..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#E5A000] transition-all">
+               </div>
+               
+               <div class="relative">
+                  <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                     <line x1="16" y1="2" x2="16" y2="6"></line>
+                     <line x1="8" y1="2" x2="8" y2="6"></line>
+                     <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  <select id="conv-date-filter" class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#E5A000] transition-all appearance-none cursor-pointer bg-white">
+                     <option value="all">All Time</option>
+                     <option value="today">Today</option>
+                     <option value="yesterday">Yesterday</option>
+                     <option value="week">Last 7 Days</option>
+                     <option value="month">Last 30 Days</option>
+                  </select>
+                  <svg class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                     <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
                </div>
                
                <div class="flex items-center gap-2">
@@ -113,6 +133,72 @@ class Conversations {
                background-color: #f3f4f6 !important;
                border-left: 4px solid #E5A000 !important;
            }
+           
+           /* Markdown styling for bot messages */
+           .bot-message-content h1,
+           .bot-message-content h2,
+           .bot-message-content h3 {
+               margin-top: 12px;
+               margin-bottom: 8px;
+               font-weight: 700;
+               color: #111;
+               line-height: 1.3;
+           }
+           
+           .bot-message-content p {
+               margin: 8px 0;
+               line-height: 1.6;
+           }
+           
+           .bot-message-content ul,
+           .bot-message-content ol {
+               margin: 8px 0;
+               padding-left: 24px;
+           }
+           
+           .bot-message-content li {
+               margin: 4px 0;
+               line-height: 1.6;
+           }
+           
+           .bot-message-content code {
+               background: #f3f4f6;
+               padding: 2px 6px;
+               border-radius: 4px;
+               font-family: 'Courier New', monospace;
+               font-size: 13px;
+           }
+           
+           .bot-message-content pre {
+               background: #f3f4f6;
+               padding: 12px;
+               border-radius: 8px;
+               overflow-x: auto;
+               margin: 8px 0;
+           }
+           
+           .bot-message-content pre code {
+               background: transparent;
+               padding: 0;
+           }
+           
+           .bot-message-content a {
+               color: #E5A000;
+               text-decoration: underline;
+           }
+           
+           .bot-message-content a:hover {
+               color: #D49000;
+           }
+           
+           .bot-message-content blockquote {
+               border-left: 3px solid #E5A000;
+               padding-left: 12px;
+               margin: 8px 0;
+               color: #666;
+               font-style: italic;
+           }
+           
            @media (max-width: 768px) {
               .responsive-conversation-chat {
                  max-height: 100vh !important;
@@ -151,6 +237,15 @@ class Conversations {
          searchInput.addEventListener('input', () => this.filterConversations());
       }
 
+      // Date filter listener
+      const dateFilter = document.getElementById('conv-date-filter');
+      if (dateFilter) {
+         dateFilter.addEventListener('change', (e) => {
+            this.dateFilter = e.target.value;
+            this.filterConversations();
+         });
+      }
+
       // Pagination listeners
       const limitSelect = document.getElementById('conv-limit-select');
       if (limitSelect) {
@@ -166,15 +261,28 @@ class Conversations {
       document.getElementById('conv-prev-btn')?.addEventListener('click', () => { if (this.currentPage > 1) { this.currentPage--; this.loadConversations(); } });
       document.getElementById('conv-next-btn')?.addEventListener('click', () => { if (this.currentPage < this.totalPages) { this.currentPage++; this.loadConversations(); } });
       document.getElementById('conv-last-btn')?.addEventListener('click', () => { this.currentPage = this.totalPages; this.loadConversations(); });
+
+      // Delete buttons listeners
+      const deleteSelectedBtn = document.getElementById('conv-delete-selected');
+      const deleteAllBtn = document.getElementById('conv-delete-all');
+
+      if (deleteSelectedBtn) {
+         deleteSelectedBtn.addEventListener('click', async () => {
+            await this.deleteSelected();
+         });
+      }
+
+      if (deleteAllBtn) {
+         deleteAllBtn.addEventListener('click', async () => {
+            await this.deleteAll();
+         });
+      }
    }
 
    static async loadConversations() {
       try {
-         // Show loading overlay or spinner logic could go here
          const list = document.getElementById('conversations-list');
          if (list) {
-            // Only show spinner if we don't have existing content to avoid flash, or show small loading indicator
-            // For now, simple spinner if empty
             if (this.allConversations.length === 0) {
                list.innerHTML = `
                   <div class="h-full flex items-center justify-center p-8">
@@ -196,10 +304,52 @@ class Conversations {
             this.renderConversationList(this.allConversations);
             this.updatePaginationControls();
 
-            // Handle deep linking to a specific session
+            // Handle deep linking to a specific session (e.g. #conversations/<sessionId> or #conversations/<sessionId>/<encodedQuery>)
             if (window.app && window.app.currentParams && window.app.currentParams[0]) {
-               const sessionId = window.app.currentParams[0];
-               // ... deep link logic ...
+               try {
+                  const sessionId = window.app.currentParams[0];
+                  // Try to find the conversation in the currently loaded page
+                  const convoElem = document.querySelector(`[data-conversation-id="${sessionId}"]`);
+                  if (convoElem) {
+                     // Make it active in the list
+                     document.querySelectorAll('.conversation-item').forEach(i => i.classList.remove('active'));
+                     convoElem.classList.add('active');
+
+                     const h3 = convoElem.querySelector('h3');
+                     const titleText = h3 ? h3.textContent : 'Conversation';
+                     if (document.querySelector('.conversation-title')) {
+                        document.querySelector('.conversation-title').textContent = titleText;
+                     }
+
+                     this.currentConversationId = sessionId;
+                     // Load messages for the conversation
+                     await this.loadConversationMessages(sessionId);
+
+                     // If there's an encoded query parameter (e.g. question), try to highlight the matching message
+                     if (window.app.currentParams[1]) {
+                        const q = decodeURIComponent(window.app.currentParams[1]);
+                        const messagesContainer = document.getElementById('conversation-messages');
+                        if (messagesContainer) {
+                           // Wait briefly to ensure messages are rendered
+                           setTimeout(() => {
+                              // Search for the first element that contains the query text
+                              const candidates = Array.from(messagesContainer.querySelectorAll('*')).filter(el => el.innerText && el.innerText.includes(q));
+                              if (candidates.length) {
+                                 const el = candidates[0];
+                                 el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                 el.classList.add('ring', 'ring-amber-300');
+                                 setTimeout(() => el.classList.remove('ring', 'ring-amber-300'), 4000);
+                              }
+                           }, 250);
+                        }
+                     }
+                  } else {
+                     // Conversation not present on the current page. Inform the user to adjust filters/pages.
+                     this.showToast('Conversation requested — if it does not appear, change page or filters to locate the session.', 'info');
+                  }
+               } catch (err) {
+                  console.error('Deep link handling failed:', err);
+               }
             }
          } else {
             if (list) list.innerHTML = '<div class="p-8 text-center text-gray-400 text-sm">No conversations found</div>';
@@ -232,21 +382,57 @@ class Conversations {
       if (deleteAllBtn) deleteAllBtn.disabled = this.totalItems === 0;
       if (deleteSelectedBtn) {
          deleteSelectedBtn.disabled = this.selectedIds.size === 0;
+         const svgIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
          deleteSelectedBtn.innerHTML = this.selectedIds.size > 0
-            ? `<span class="bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full text-[10px] font-bold mr-1">${this.selectedIds.size}</span> Delete`
-            : `Delete`;
+            ? `${svgIcon}<span class="bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full text-[10px] font-bold">${this.selectedIds.size}</span> Delete`
+            : `${svgIcon}Delete`;
       }
    }
 
    static filterConversations() {
-      // Client-side search within the current page
       const searchInput = document.getElementById('conv-search');
       const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
       const filtered = this.allConversations.filter(conv => {
-         return conv.title?.toLowerCase().includes(searchTerm) ||
+         // Search filter
+         const matchesSearch = !searchTerm || 
+            conv.title?.toLowerCase().includes(searchTerm) ||
             conv.id.toLowerCase().includes(searchTerm) ||
             (conv.lastMessage && conv.lastMessage.toLowerCase().includes(searchTerm));
+
+         if (!matchesSearch) return false;
+
+         // Date filter
+         if (this.dateFilter === 'all') return true;
+
+         let convDate;
+         if (conv.startedAt && typeof conv.startedAt === 'object' && conv.startedAt._seconds) {
+            convDate = new Date(conv.startedAt._seconds * 1000);
+         } else if (conv.startedAt && typeof conv.startedAt === 'string') {
+            convDate = new Date(conv.startedAt);
+         } else {
+            return true; // If no date, include it
+         }
+
+         const now = new Date();
+         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+         const yesterdayStart = new Date(todayStart);
+         yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+         const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+         switch (this.dateFilter) {
+            case 'today':
+               return convDate >= todayStart;
+            case 'yesterday':
+               return convDate >= yesterdayStart && convDate < todayStart;
+            case 'week':
+               return convDate >= weekAgo;
+            case 'month':
+               return convDate >= monthAgo;
+            default:
+               return true;
+         }
       });
 
       this.renderConversationList(filtered);
@@ -273,37 +459,69 @@ class Conversations {
 
          const timeStr = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
          const dateShort = startTime.toLocaleDateString([], { month: 'short', day: 'numeric' });
-         const statusIndicator = conv.status === 'active' ? 'bg-[#27ae60]' : conv.status === 'escalated' ? 'bg-[#E5A000]' : 'bg-gray-300';
 
          let title = conv.title;
          if (!title || title.startsWith('Visitor')) {
-            // Fallback for better display
             title = conv.topic || `Chat ${dateShort}`;
          }
          if (!title) title = `Visitor ${conv.id.substring(0, 4)}`;
 
-         const avatarUrl = conv.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${conv.id}`;
+         // Generate avatar with initials and color
+         const getAvatarData = (id, title) => {
+            const colors = [
+               '#E5A000', // Gold
+               '#3B82F6', // Blue
+               '#10B981', // Green
+               '#F59E0B', // Amber
+               '#8B5CF6', // Purple
+               '#EF4444', // Red
+               '#06B6D4', // Cyan
+               '#EC4899', // Pink
+            ];
+            const colorIndex = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+            const bgColor = colors[colorIndex];
+            
+            // Get initials from title
+            const words = title.split(' ').filter(w => w.length > 0);
+            let initials = 'U';
+            if (words.length >= 2) {
+               initials = (words[0][0] + words[1][0]).toUpperCase();
+            } else if (words.length === 1 && words[0].length > 0) {
+               initials = words[0].substring(0, 2).toUpperCase();
+            }
+            
+            return { initials, bgColor };
+         };
+
+         const { initials, bgColor } = getAvatarData(conv.id, title);
 
          return `
             <div class="group flex items-start gap-3 p-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-all relative overflow-hidden conversation-item" data-conversation-id="${conv.id}">
                <div class="pt-1" onclick="event.stopPropagation()">
                   <input type="checkbox" class="conv-row-checkbox w-4 h-4 rounded border-gray-300 text-[#E5A000] focus:ring-[#E5A000] cursor-pointer" data-id="${conv.id}" ${this.selectedIds.has(String(conv.id)) ? 'checked' : ''}>
                </div>
-               <div class="relative flex-shrink-0">
-                 <div class="w-10 h-10 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center overflow-hidden">
-                    <img src="${avatarUrl}" alt="${title}" class="w-full h-full object-cover">
-                 </div>
-                 <div class="absolute bottom-0 right-0 w-2.5 h-2.5 ${statusIndicator} rounded-full border-2 border-white"></div>
-               </div>
+                     <div class="relative flex-shrink-0">
+                                  <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm" style="background-color: ${bgColor};" title="${this.escapeHtml(title)}">
+                                                          <!-- Robot avatar (SVG) - white stroke/icon for visibility -->
+                                                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                                             <!-- Head outline -->
+                                                             <rect x="4" y="6" width="16" height="10" rx="2" stroke="#FFFFFF" stroke-width="1.6" fill="none" stroke-linejoin="round" />
+                                                             <!-- Antenna/head top -->
+                                                             <rect x="9" y="3.6" width="6" height="3" rx="0.8" stroke="#FFFFFF" stroke-width="1.4" fill="none" />
+                                                             <!-- Eyes (small filled dots for contrast) -->
+                                                             <circle cx="9.5" cy="11.5" r="0.9" fill="#FFFFFF" />
+                                                             <circle cx="14.5" cy="11.5" r="0.9" fill="#FFFFFF" />
+                                                             <!-- Mouth line -->
+                                                             <line x1="9.5" y1="14.2" x2="14.5" y2="14.2" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" />
+                                                          </svg>
+                                  </div>
+                               </div>
                <div class="flex-1 min-w-0">
                  <div class="flex justify-between items-baseline mb-0.5">
                    <h3 class="text-[13px] font-bold text-gray-900 truncate pr-2">${this.escapeHtml(title)}</h3>
                    <span class="text-[10px] text-gray-400 font-medium shrink-0">${dateShort}</span>
                  </div>
                  <p class="text-[12px] text-gray-500 truncate leading-relaxed">${this.escapeHtml(conv.lastMessage || 'No messages')}</p>
-                 <div class="mt-1 flex items-center gap-2">
-                    <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">${conv.id.substring(0, 6)}...</span>
-                 </div>
                </div>
             </div>
          `;
@@ -373,26 +591,15 @@ class Conversations {
       document.querySelectorAll('.conv-row-checkbox').forEach(cb => {
          cb.addEventListener('change', (e) => {
             const id = cb.dataset.id;
-            if (cb.checked) this.selectedIds.add(String(id));
-            else this.selectedIds.delete(String(id));
+            if (cb.checked) {
+               this.selectedIds.add(String(id));
+            } else {
+               this.selectedIds.delete(String(id));
+            }
 
             this.updatePaginationControls(); // Update delete button counts
          });
       });
-
-      // Global delete buttons
-      const deleteSelectedBtn = document.getElementById('conv-delete-selected');
-      const deleteAllBtn = document.getElementById('conv-delete-all');
-
-      // Remove old listeners to avoid duplicates if re-rendering (though we re-render list not whole container typically)
-      // Actually here we are inside setupConversationListeners called by renderConversationList.
-      // The buttons are outside the list, so we might want to attach them in setupListeners or ensure we don't duplicate.
-      // Better to attach them in setupListeners? 
-      // setupListeners is called ONCE in afterRender. 
-      // However, deleteSelectedBtn is in the HTML returned by render().
-      // WAIT using replaceWith cloneNode logic is safer or just checking if listener attached.
-
-      // Let's attach them in setupListeners (static method)
    }
 
    static async loadConversationMessages(conversationId) {
@@ -408,7 +615,6 @@ class Conversations {
             </div>
          `;
 
-         // Use apiService
          const messages = await window.apiService.getConversationMessages(conversationId);
 
          if (!messages || messages.length === 0) {
@@ -435,8 +641,6 @@ class Conversations {
 
    static renderMessages(messages) {
       const messagesContainer = document.getElementById('conversation-messages');
-      // ... existing message rendering logic ...
-      // Can reuse what was there or simplify
 
       const html = messages.map(msg => {
          const timestamp = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -460,8 +664,8 @@ class Conversations {
                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2z"></path><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
                   </div>
                   <div class="flex flex-col">
-                     <div class="border border-gray-100 rounded-2xl rounded-tl-sm p-5 shadow-sm bg-white">
-                        <p class="text-[14px] text-gray-700 leading-relaxed">${this.escapeHtml(msg.content)}</p>
+                     <div class="border border-gray-100 rounded-2xl rounded-tl-sm p-5 shadow-sm bg-white bot-message-content">
+                        ${this.parseMarkdown(msg.content)}
                      </div>
                      <span class="text-[10px] text-gray-400 mt-1 ml-1">${timestamp}</span>
                   </div>
@@ -474,8 +678,61 @@ class Conversations {
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
    }
 
-   // ... CRUD methods (deleteConversation, deleteSelected, deleteAll, showConfirm, showToast, escapeHtml) ...
-   // Re-implementing them to ensure they are present and correct
+   /**
+    * Parse markdown to HTML for bot messages
+    */
+   static parseMarkdown(text) {
+      if (!text) return '';
+      
+      // Escape HTML first
+      text = text.replace(/&/g, '&amp;')
+                 .replace(/</g, '&lt;')
+                 .replace(/>/g, '&gt;');
+
+      // Headers
+      text = text.replace(/^### (.*?)$/gm, '<h3 class="text-[15px] font-bold text-gray-900 mt-3 mb-2">$1</h3>');
+      text = text.replace(/^## (.*?)$/gm, '<h2 class="text-[16px] font-bold text-gray-900 mt-3 mb-2">$1</h2>');
+      text = text.replace(/^# (.*?)$/gm, '<h1 class="text-[18px] font-bold text-gray-900 mt-3 mb-2">$1</h1>');
+
+      // Bold
+      text = text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-gray-900">$1</strong>');
+      text = text.replace(/__(.*?)__/g, '<strong class="font-bold text-gray-900">$1</strong>');
+
+      // Italic
+      text = text.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>');
+      text = text.replace(/_(.*?)_/g, '<em class="italic">$1</em>');
+
+      // Code blocks
+      text = text.replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-100 p-3 rounded-lg overflow-x-auto my-2"><code class="text-[13px] font-mono">$1</code></pre>');
+
+      // Inline code
+      text = text.replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1.5 py-0.5 rounded text-[13px] font-mono">$1</code>');
+
+      // Links
+      text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-[#E5A000] underline hover:text-[#D49000]">$1</a>');
+
+      // Unordered lists
+      text = text.replace(/^\* (.*?)$/gm, '<li class="ml-4">$1</li>');
+      text = text.replace(/^- (.*?)$/gm, '<li class="ml-4">$1</li>');
+      text = text.replace(/(<li class="ml-4">.*<\/li>\n?)+/g, '<ul class="list-disc ml-4 my-2 space-y-1">$&</ul>');
+
+      // Ordered lists
+      text = text.replace(/^\d+\. (.*?)$/gm, '<li class="ml-4">$1</li>');
+      
+      // Blockquotes
+      text = text.replace(/^> (.*?)$/gm, '<blockquote class="border-l-4 border-[#E5A000] pl-3 italic text-gray-600 my-2">$1</blockquote>');
+
+      // Line breaks
+      text = text.replace(/\n\n/g, '</p><p class="text-[14px] text-gray-700 leading-relaxed my-2">');
+      text = text.replace(/\n/g, '<br>');
+
+      // Wrap in paragraphs if not already in block element
+      if (!text.match(/^<(h[1-6]|ul|ol|pre|blockquote)/)) {
+         text = '<p class="text-[14px] text-gray-700 leading-relaxed">' + text + '</p>';
+      }
+
+      return text;
+   }
 
    static async deleteConversation(sessionId) {
       try {
@@ -499,8 +756,12 @@ class Conversations {
    }
 
    static async deleteSelected() {
-      if (this.selectedIds.size === 0) return;
-      const ok = await this.showConfirm(`Delete ${this.selectedIds.size} conversations?`);
+      if (this.selectedIds.size === 0) {
+         this.showToast('No conversations selected', 'info');
+         return;
+      }
+
+      const ok = await this.showConfirm(`Delete ${this.selectedIds.size} selected conversation${this.selectedIds.size > 1 ? 's' : ''}?`);
       if (!ok) return;
 
       try {
@@ -512,7 +773,7 @@ class Conversations {
          });
          const result = await res.json();
          if (result.success) {
-            this.showToast(`Deleted ${ids.length} conversations`, 'success');
+            this.showToast(`Deleted ${ids.length} conversation${ids.length > 1 ? 's' : ''}`, 'success');
             this.selectedIds.clear();
             await this.loadConversations();
          } else {

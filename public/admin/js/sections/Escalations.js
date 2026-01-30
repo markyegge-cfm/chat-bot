@@ -157,7 +157,9 @@ class Escalations {
         <td class="py-5 px-4">
            <button 
               class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-semibold bg-[#E5A000]/10 text-[#E5A000] hover:bg-[#E5A000]/20 transition-all"
-              onclick="window.location.hash = 'conversations/${row.sessionId}';">
+              data-action="view-session"
+              data-session="${row.sessionId}"
+              data-question="${encodeURIComponent(row.question || '')}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
               </svg>
@@ -172,10 +174,18 @@ class Escalations {
                   data-id="${row.id}" 
                   data-status="${row.status}"
                   title="${row.status === 'resolved' ? 'Mark as Open' : 'Mark as Resolved'}"
-                  class="p-2 rounded-full transition-all ${row.status === 'resolved' ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-gray-400 hover:text-green-600 hover:bg-gray-100'}">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                     <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
+                  class="p-2 rounded-full transition-all ${row.status === 'resolved' ? 'text-green-700 bg-green-100 font-semibold' : 'text-gray-400 hover:text-green-600 hover:bg-gray-100'}">
+                  ${row.status === 'resolved' ? `
+                     <!-- Resolved: green check circle image -->
+                     <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="resolved">
+                       <circle cx="12" cy="12" r="12" fill="#00C853" />
+                       <path d="M20 7L9 18l-5-5" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                     </svg>
+                  ` : `
+                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                     </svg>
+                  `}
                </button>
                <button 
                   data-action="delete" 
@@ -320,6 +330,17 @@ class Escalations {
                if (ok) await this.deleteEscalation(id);
             } else if (action === 'toggle-status') {
                await this.toggleStatus(id, status === 'open' ? 'resolved' : 'open');
+            } else if (action === 'view-session') {
+               // Deep link to conversations view. Include the question so Conversations can highlight the message.
+               const sessionId = btn.dataset.session;
+               const question = btn.dataset.question || '';
+               try {
+                  // question is already encoded in the data attribute
+                  window.location.hash = `conversations/${sessionId}/${question}`;
+               } catch (err) {
+                  // Fallback to simple navigation
+                  window.location.hash = `conversations/${sessionId}`;
+               }
             }
          });
       }
