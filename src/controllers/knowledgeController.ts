@@ -1,10 +1,11 @@
 /**
- * Knowledge Base Controller (Production)
+ * UPDATED: Now uses proper GCS Import API instead of broken direct upload
  * 
- * ✅ Vertex AI RAG stores document content for semantic search
- * ✅ Firebase Firestore stores Q&A metadata for fast retrieval
- * ✅ Cloud Run compatible
- * ✅ Background processing for RAG operations (async queuing)
+ * Key changes:
+ * 1. No manual chunking for DOCX - let Vertex AI handle it
+ * 2. Single file upload per document
+ * 3. Vertex AI creates chunks internally with proper indexing
+ * 4. Much simpler code, better results
  */
 
 import { type Request, type Response } from 'express';
@@ -15,69 +16,17 @@ import backgroundTaskService from '../services/backgroundTaskService';
 import firebaseService from '../services/firebaseService';
 import vertexAIRag from '../services/vertexAIRagService';
 
-// Temporary file directory for uploads
 const RAG_TEMP_DIR = path.join(process.cwd(), '.rag-temp');
 
-/**
- * Helper to chunk text into manageable segments
- */
-function chunkText(text: string, maxChunkSize: number = 4000): string[] {
-  if (!text) return [];
-
-  const chunks: string[] = [];
-  let currentChunk = "";
-
-  // Split by paragraphs first to avoid breaking sentences/paragraphs if possible
-  const sections = text.split(/\n\s*\n/);
-
-  for (const section of sections) {
-    if ((currentChunk.length + section.length) > maxChunkSize) {
-      if (currentChunk.length > 0) {
-        chunks.push(currentChunk.trim());
-        currentChunk = "";
-      }
-
-      // If a single section is larger than maxChunkSize, split it by sentences or characters
-      if (section.length > maxChunkSize) {
-        let remaining = section;
-        while (remaining.length > maxChunkSize) {
-          chunks.push(remaining.substring(0, maxChunkSize).trim());
-          remaining = remaining.substring(maxChunkSize);
-        }
-        currentChunk = remaining;
-      } else {
-        currentChunk = section;
-      }
-    } else {
-      currentChunk += (currentChunk ? "\n\n" : "") + section;
-    }
-  }
-
-  if (currentChunk.trim().length > 0) {
-    chunks.push(currentChunk.trim());
-  }
-
-  return chunks;
-}
-
-/**
- * Ensure temp directory exists
- */
 function ensureTempDir() {
   if (!fs.existsSync(RAG_TEMP_DIR)) {
     fs.mkdirSync(RAG_TEMP_DIR, { recursive: true });
   }
 }
 
-/**
- * Helper to map Vertex AI file properties to UI KnowledgeItem properties
- * This ensures the frontend always receives 'question' and 'answer' keys.
- */
 const mapFileToUI = (file: any) => ({
   id: file.id,
-  // Map Vertex AI 'displayName' to UI 'question'
   question: file.displayName || 'Unnamed Document',
-  // Map Vertex AI 'description' to UI 'answer'
   answer: file.description || 'No content description available.',
   type: file.type || 'manual',
   status: file.status,
@@ -85,14 +34,9 @@ const mapFileToUI = (file: any) => ({
   updatedAt: file.updatedAt,
 });
 
-/**
- * GET /api/knowledge
- * List all knowledge items from Firebase Firestore
- */
 export const getAllKnowledge = async (req: Request, res: Response): Promise<void> => {
   try {
     const knowledgeItems = await firebaseService.getAllKnowledge();
-
     (res as any).json({
       success: true,
       data: knowledgeItems,
@@ -100,20 +44,16 @@ export const getAllKnowledge = async (req: Request, res: Response): Promise<void
     });
   } catch (error: any) {
     console.error('❌ Get all knowledge error:', error.message);
-    // Return empty list on error instead of 500 - allows UI to function
     (res as any).json({
       success: true,
       data: [],
       total: 0,
-      error: 'Failed to fetch from Firestore (collection may not exist yet)',
+      error: 'Failed to fetch from Firestore',
       message: error.message,
     });
   }
 };
 
-/**
- * GET /api/knowledge/stats
- */
 export const getKnowledgeStats = async (req: Request, res: Response): Promise<void> => {
   try {
     const stats = await firebaseService.getDetailedStats();
@@ -123,9 +63,6 @@ export const getKnowledgeStats = async (req: Request, res: Response): Promise<vo
   }
 };
 
-/**
- * GET /api/knowledge/:id
- */
 export const getKnowledgeById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -141,10 +78,7 @@ export const getKnowledgeById = async (req: Request, res: Response): Promise<voi
       return;
     }
 
-    (res as any).json({
-      success: true,
-      data: item
-    });
+    (res as any).json({ success: true, data: item });
   } catch (error: any) {
     (res as any).status(500).json({ success: false, error: error.message });
   }
@@ -163,18 +97,18 @@ export const createKnowledge = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // 1. Save metadata to Firebase with PROCESSING status
+    // Save metadata to Firebase
     const knowledgeData = await firebaseService.saveKnowledge({
-      ragFileId: '', // Will be populated by background task
+      ragFileId: '',
       question: question.trim(),
       answer: answer.trim(),
       type: 'manual',
-      status: 'PROCESSING', // Mark as processing initially
+      status: 'PROCESSING',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
 
-    // 2. Queue RAG upload in background
+    // Queue RAG upload
     ensureTempDir();
     const tempFile = path.join(RAG_TEMP_DIR, `upload_${Date.now()}_${knowledgeData.id}.txt`);
     fs.writeFileSync(tempFile, `Q: ${question.trim()}\n\nA: ${answer.trim()}`);
@@ -185,14 +119,10 @@ export const createKnowledge = async (req: Request, res: Response): Promise<void
       description: answer.substring(0, 500),
     });
 
-    // Return immediately without waiting for RAG upload
     (res as any).status(201).json({
       success: true,
       message: 'Knowledge item queued for processing',
-      data: {
-        ...knowledgeData,
-        status: 'PROCESSING',
-      },
+      data: { ...knowledgeData, status: 'PROCESSING' },
     });
   } catch (error: any) {
     console.error('❌ Create knowledge error:', error.message);
@@ -202,7 +132,6 @@ export const createKnowledge = async (req: Request, res: Response): Promise<void
 
 /**
  * PUT /api/knowledge/:id
- * Updates Q&A: Queues for async delete (old RAG file) + upload (new RAG file)
  */
 export const updateKnowledge = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -214,13 +143,11 @@ export const updateKnowledge = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // Get the knowledge metadata to find the old RAG file ID
     let knowledge = null;
     try {
       knowledge = await firebaseService.getKnowledgeById(id);
-      console.log(`📚 Found knowledge item: ${id}, ragFileId: ${knowledge?.ragFileId}`);
     } catch (e) {
-      console.warn('⚠️  Could not fetch from Firebase, proceeding with update');
+      console.warn('⚠️  Could not fetch from Firebase');
     }
 
     if (!knowledge) {
@@ -228,15 +155,13 @@ export const updateKnowledge = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // Update Firebase immediately with new content and PROCESSING status
     await firebaseService.updateKnowledge(id, {
       question: question.trim(),
       answer: answer.trim(),
-      status: 'PROCESSING', // Mark as processing
+      status: 'PROCESSING',
       updatedAt: new Date().toISOString(),
     });
 
-    // Queue RAG update (delete old + upload new) in background
     ensureTempDir();
     const tempFile = path.join(RAG_TEMP_DIR, `update_${Date.now()}_${id}.txt`);
     fs.writeFileSync(tempFile, `Q: ${question.trim()}\n\nA: ${answer.trim()}`);
@@ -248,16 +173,10 @@ export const updateKnowledge = async (req: Request, res: Response): Promise<void
       description: answer.substring(0, 500),
     });
 
-    // Return immediately without waiting for RAG operations
     (res as any).json({
       success: true,
       message: 'Knowledge item queued for update',
-      data: {
-        id,
-        question: question.trim(),
-        answer: answer.trim(),
-        status: 'PROCESSING',
-      },
+      data: { id, question: question.trim(), answer: answer.trim(), status: 'PROCESSING' },
     });
   } catch (error: any) {
     console.error('❌ Update knowledge error:', error.message);
@@ -267,7 +186,6 @@ export const updateKnowledge = async (req: Request, res: Response): Promise<void
 
 /**
  * DELETE /api/knowledge/:id
- * Queues deletion from both RAG and Firebase asynchronously
  */
 export const deleteKnowledge = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -278,11 +196,9 @@ export const deleteKnowledge = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // Get knowledge metadata from Firebase
     let knowledge = null;
     try {
       knowledge = await firebaseService.getKnowledgeById(id);
-      console.log(`📚 Found knowledge item: ${id}, ragFileId: ${knowledge?.ragFileId}`);
     } catch (e) {
       console.warn('⚠️  Could not fetch knowledge from Firebase');
     }
@@ -292,19 +208,13 @@ export const deleteKnowledge = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // Delete from Firebase immediately
     try {
-      console.log(`🗑️  Deleting from Firebase: ${id}`);
       await firebaseService.deleteKnowledge(id);
-      console.log(`✅ Deleted from Firebase`);
-
-      // Delete Docx/PDF file from Firebase Storage if it's that type
       if (knowledge.type === 'pdf' || knowledge.type === 'docx') {
         try {
-          await firebaseService.deletePdfFile(id); // Reusing the same service method for both
-          console.log(`✅ Deleted ${knowledge.type} file from Storage`);
+          await firebaseService.deletePdfFile(id);
         } catch (error: any) {
-          console.warn(`⚠️  Could not delete ${knowledge.type} file:`, error.message);
+          console.warn(`⚠️  Could not delete file:`, error.message);
         }
       }
     } catch (error: any) {
@@ -313,20 +223,13 @@ export const deleteKnowledge = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // Queue RAG deletion in background if we have RAG file IDs
-    if (knowledge.ragFileIds && knowledge.ragFileIds.length > 0) {
-      backgroundTaskService.queueTask('DELETE_RAG', id, {
-        ragFileIds: knowledge.ragFileIds,
-      });
-      console.log(`📋 Queued RAG deletion for ${knowledge.ragFileIds.length} chunks`);
-    } else if (knowledge.ragFileId) {
+    // Queue RAG deletion - now simpler, just one file ID
+    if (knowledge.ragFileId) {
       backgroundTaskService.queueTask('DELETE_RAG', id, {
         ragFileId: knowledge.ragFileId,
       });
-      console.log(`📋 Queued RAG deletion for: ${knowledge.ragFileId}`);
     }
 
-    // Return immediately
     (res as any).json({
       success: true,
       message: 'Knowledge item deleted',
@@ -340,8 +243,6 @@ export const deleteKnowledge = async (req: Request, res: Response): Promise<void
 
 /**
  * POST /api/knowledge/upload/csv
- * Upload multiple Q&A pairs from CSV - creates individual files for each Q&A
- * Saves to both Vertex AI RAG and Firebase Firestore
  */
 export const uploadCSV = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -355,7 +256,6 @@ export const uploadCSV = async (req: Request, res: Response): Promise<void> => {
     const uploadedFiles: any[] = [];
     const errors: string[] = [];
 
-    // Upload each Q&A pair as a separate file
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
 
@@ -366,14 +266,12 @@ export const uploadCSV = async (req: Request, res: Response): Promise<void> => {
 
         fs.writeFileSync(tempFile, content);
 
-        // 1. Upload to Vertex AI RAG
         const ragFile = await vertexAIRag.uploadFile(
           tempFile,
           item.question.substring(0, 100),
           item.answer.substring(0, 500)
         );
 
-        // 2. Save metadata to Firebase Firestore
         await firebaseService.saveKnowledge({
           ragFileId: ragFile.name,
           question: item.question.trim(),
@@ -385,7 +283,6 @@ export const uploadCSV = async (req: Request, res: Response): Promise<void> => {
         });
 
         uploadedFiles.push(ragFile);
-
         try { fs.unlinkSync(tempFile); } catch (e) { }
       } catch (error: any) {
         console.error(`❌ CSV row ${i + 1} error:`, error);
@@ -411,8 +308,7 @@ export const uploadCSV = async (req: Request, res: Response): Promise<void> => {
 
 /**
  * POST /api/knowledge/upload/docx
- * Upload a DOCX/DOC file - extracts text, chunks it, and uploads as text files
- * Saves to both Vertex AI RAG and Firebase Firestore + Storage
+ * UPDATED: No more manual chunking! Let Vertex AI handle it.
  */
 export const uploadDocx = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -429,11 +325,11 @@ export const uploadDocx = async (req: Request, res: Response): Promise<void> => 
       // 1. Convert base64 to buffer
       const buffer = Buffer.from(content, 'base64');
 
-      // 2. Save original file to temp for extraction
+      // 2. Save to temp for extraction
       const tempDocxPath = path.join(RAG_TEMP_DIR, `origin_${Date.now()}_${filename}`);
       fs.writeFileSync(tempDocxPath, buffer);
 
-      // 3. Extract text using mammoth
+      // 3. Extract text
       let extractedText = "";
       try {
         const result = await mammoth.extractRawText({ path: tempDocxPath });
@@ -441,17 +337,12 @@ export const uploadDocx = async (req: Request, res: Response): Promise<void> => 
         console.log(`📄 Extracted ${extractedText.length} characters from docx`);
       } catch (extractError) {
         console.error('❌ Mammoth extraction failed:', extractError);
-        throw new Error('Failed to extract text from document. Make sure it is a valid .docx file.');
+        throw new Error('Failed to extract text from document');
       }
 
-      // 4. Chunk text
-      const chunks = chunkText(extractedText);
-      console.log(`📦 Split text into ${chunks.length} chunks`);
-
-      // 5. Save metadata to Firebase Firestore first (to get ID)
+      // 4. Save metadata to Firebase
       const knowledge = await firebaseService.saveKnowledge({
         ragFileId: '',
-        ragFileIds: [],
         question: title || filename,
         answer: description || (extractedText.substring(0, 500) + (extractedText.length > 500 ? '...' : '')),
         type: 'docx',
@@ -460,38 +351,32 @@ export const uploadDocx = async (req: Request, res: Response): Promise<void> => 
         updatedAt: new Date().toISOString(),
       });
 
-      // 6. Upload original file to Firebase Storage (for reference/download)
+      // 5. Upload original file to Firebase Storage
       let fileUrl = '';
       try {
         fileUrl = await firebaseService.uploadPdfFile(buffer, filename, knowledge.id);
-        console.log(`✅ Original file uploaded to Firebase Storage: ${fileUrl}`);
+        console.log(`✅ Original file uploaded to Storage: ${fileUrl}`);
       } catch (storageError: any) {
-        console.error('❌ Failed to upload to Firebase Storage:', storageError.message);
+        console.error('❌ Failed to upload to Storage:', storageError.message);
       }
 
-      // 7. Update knowledge metadata with file URL
       if (fileUrl) {
-        await firebaseService.updateKnowledge(knowledge.id, {
-          fileUrl,
-        });
+        await firebaseService.updateKnowledge(knowledge.id, { fileUrl });
       }
 
-      // 8. Create temporary text files for chunks
-      const chunkFilePaths: string[] = [];
-      for (let i = 0; i < chunks.length; i++) {
-        const chunkPath = path.join(RAG_TEMP_DIR, `chunk_${knowledge.id}_${i}.txt`);
-        fs.writeFileSync(chunkPath, chunks[i]);
-        chunkFilePaths.push(chunkPath);
-      }
+      // 6. Create single .txt file with full extracted content
+      // NO CHUNKING - let Vertex AI do it!
+      const fullTextFile = path.join(RAG_TEMP_DIR, `full_${knowledge.id}.txt`);
+      fs.writeFileSync(fullTextFile, extractedText);
 
-      // 9. Queue RAG upload task for chunks
+      // 7. Queue single upload (Vertex AI will chunk it internally)
       backgroundTaskService.queueTask('UPLOAD_RAG', knowledge.id, {
-        tempFilePaths: chunkFilePaths,
+        tempFilePath: fullTextFile,  // Single file, not array!
         displayName: title || filename.substring(0, 100),
         description: description || `Extracted from: ${filename}`,
       });
 
-      // Clean up the original temp docx file (chunks will be cleaned up by the background task)
+      // Clean up temp docx
       try { fs.unlinkSync(tempDocxPath); } catch (e) { }
 
       (res as any).status(201).json({
@@ -503,7 +388,7 @@ export const uploadDocx = async (req: Request, res: Response): Promise<void> => 
           filename,
           type: 'docx',
           fileUrl,
-          chunksCount: chunks.length,
+          status: 'PROCESSING', // Will be updated by background task when complete
           createdAt: knowledge.createdAt,
         }
       });
@@ -517,10 +402,6 @@ export const uploadDocx = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-/**
- * @deprecated Use uploadDocx instead
- * PDF support is being replaced by Docx
- */
 export const uploadPDF = async (req: Request, res: Response): Promise<void> => {
   (res as any).status(400).json({
     success: false,
@@ -528,9 +409,6 @@ export const uploadPDF = async (req: Request, res: Response): Promise<void> => {
   });
 };
 
-/**
- * POST /api/knowledge/batch-delete
- */
 export const batchDeleteKnowledge = async (req: Request, res: Response): Promise<void> => {
   try {
     const { ids } = req.body;
@@ -549,9 +427,7 @@ export const batchDeleteKnowledge = async (req: Request, res: Response): Promise
           if (knowledge.type === 'pdf' || knowledge.type === 'docx') {
             try { await firebaseService.deletePdfFile(id); } catch (e) { }
           }
-          if (knowledge.ragFileIds && knowledge.ragFileIds.length > 0) {
-            backgroundTaskService.queueTask('DELETE_RAG', id, { ragFileIds: knowledge.ragFileIds });
-          } else if (knowledge.ragFileId) {
+          if (knowledge.ragFileId) {
             backgroundTaskService.queueTask('DELETE_RAG', id, { ragFileId: knowledge.ragFileId });
           }
           results.successful++;
@@ -563,7 +439,11 @@ export const batchDeleteKnowledge = async (req: Request, res: Response): Promise
       }
     }
 
-    (res as any).json({ success: true, message: `Deleted ${results.successful} items`, data: results });
+    (res as any).json({
+      success: true,
+      message: `Deleted ${results.successful} items`,
+      data: results
+    });
   } catch (error: any) {
     (res as any).status(500).json({ success: false, error: error.message });
   }
