@@ -1,8 +1,6 @@
-// Load environment variables FIRST (before any other imports)
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Then import everything else
 import cors from 'cors';
 import express, { type Request, type Response } from 'express';
 import path from 'path';
@@ -14,55 +12,35 @@ import knowledgeRoutes from './routes/knowledgeRoutes';
 import statsRoutes from './routes/statsRoutes';
 import vertexAIRag from './services/vertexAIRagService';
 
-const app: any = express();
-const PORT = process.env.PORT || 8080;
+const app = express();
+const PORT: number = parseInt(process.env.PORT || '3000');
 
-// ============================================
-// MIDDLEWARE
-// ============================================
 app.use(cors());
-// Increase body size limit to 50MB to support PDF uploads
-// (PDFs are base64-encoded, making them ~33% larger)
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ limit: '15mb', extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// ============================================
-// HEALTH CHECK
-// ============================================
 app.get('/health', (req: Request, res: Response) => {
-  (res as any).json({
+  res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
   });
 });
 
-// ============================================
-// WIDGET ENDPOINT
-// ============================================
 app.get('/widget.js', (req: Request, res: Response) => {
-  (res as any).setHeader('Content-Type', 'application/javascript');
-  (res as any).sendFile(path.join(__dirname, '../public/widget.js'));
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(path.join(__dirname, '../public/widget.js'));
 });
 
-// ============================================
-// ADMIN LOGIN
-// ============================================
 app.get('/admin/login', (req: Request, res: Response) => {
-  (res as any).sendFile(path.join(__dirname, '../public/admin/login.html'));
+  res.sendFile(path.join(__dirname, '../public/admin/login.html'));
 });
 
-// ============================================
-// ADMIN DASHBOARD
-// ============================================
 app.get('/admin', (req: Request, res: Response) => {
-  (res as any).sendFile(path.join(__dirname, '../public/admin/index.html'));
+  res.sendFile(path.join(__dirname, '../public/admin/index.html'));
 });
 
-// ============================================
-// ROUTE MOUNTING
-// ============================================
 app.use(authRoutes);
 app.use(chatRoutes);
 app.use(knowledgeRoutes);
@@ -70,28 +48,20 @@ app.use('/api', conversationRoutes);
 app.use('/api', escalationRoutes);
 app.use(statsRoutes);
 
-// ============================================
-// 404 HANDLER
-// ============================================
-app.use((req: any, res: any) => {
+app.use((req: Request, res: Response) => {
   res.status(404).json({
     error: 'Not found',
     path: req.path,
   });
 });
 
-// ============================================
-// START SERVER
-// ============================================
 import firebaseService from './services/firebaseService';
 
 const startServer = async () => {
   try {
-    // Initialize Vertex AI RAG Service
     console.log('\n🔧 Initializing Vertex AI RAG Service...');
     await vertexAIRag.initialize();
     
-    // Initialize Firebase Service (non-blocking - continue if it fails)
     try {
       await firebaseService.initialize();
     } catch (error: any) {
@@ -100,7 +70,6 @@ const startServer = async () => {
       console.log('💡 Tip: Ensure your Firebase credentials are properly configured');
     }
     
-    // Start Express server
     app.listen(PORT, () => {
       console.log(`\n🚀 Server running at http://localhost:${PORT}`);
       console.log(`📊 Dashboard: http://localhost:${PORT}/admin`);

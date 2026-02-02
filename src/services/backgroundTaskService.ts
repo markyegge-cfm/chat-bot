@@ -2,6 +2,8 @@ import fs from 'fs';
 import firebaseService from './firebaseService';
 import vertexAIRag from './vertexAIRagService';
 
+const TASK_RETENTION_MS = 30000;
+
 export type TaskType = 'UPLOAD_RAG' | 'DELETE_RAG' | 'UPDATE_RAG';
 
 export interface BackgroundTask {
@@ -88,8 +90,7 @@ class BackgroundTaskService {
         console.error(`❌ Task failed: ${task.id}`, error.message);
       }
 
-      // Keep task in map for a bit for status checking, then remove
-      setTimeout(() => this.tasks.delete(task!.id), 30000);
+      setTimeout(() => this.tasks.delete(task!.id), TASK_RETENTION_MS);
     }
 
     this.processing = false;
