@@ -1,8 +1,6 @@
 /**
- * Knowledge Base Controller - ALL uploads now use GCS Import API
- * 
- * IMPORTANT: The direct upload endpoint doesn't exist in Vertex AI RAG REST API.
- * ALL file uploads (manual, CSV, DOCX) MUST use GCS staging + ImportFiles API.
+ * Knowledge Base Controller
+ * Handles knowledge base uploads via GCS Import API.
  */
 
 import { type Request, type Response } from 'express';
@@ -72,7 +70,7 @@ export const getKnowledgeById = async (req: Request, res: Response): Promise<voi
 
 /**
  * POST /api/knowledge
- * Creates Q&A: Queues for async upload to Vertex AI RAG + Saves to Firebase
+ * Creates Q&A pair and queues for async upload to Vertex AI RAG.
  */
 export const createKnowledge = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -83,7 +81,6 @@ export const createKnowledge = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // Save metadata to Firebase
     const knowledgeData = await firebaseService.saveKnowledge({
       ragFileId: '',
       question: question.trim(),
@@ -94,7 +91,6 @@ export const createKnowledge = async (req: Request, res: Response): Promise<void
       updatedAt: new Date().toISOString(),
     });
 
-    // Queue RAG upload (uses GCS staging)
     ensureTempDir();
     const tempFile = path.join(RAG_TEMP_DIR, `upload_${Date.now()}_${knowledgeData.id}.txt`);
     fs.writeFileSync(tempFile, `Q: ${question.trim()}\n\nA: ${answer.trim()}`);
@@ -229,7 +225,7 @@ export const deleteKnowledge = async (req: Request, res: Response): Promise<void
 
 /**
  * POST /api/knowledge/upload/csv
- * Now uses background tasks with GCS staging (same as manual/DOCX)
+ * Batch upload Q&A pairs from CSV using background tasks.
  */
 export const uploadCSV = async (req: Request, res: Response): Promise<void> => {
   try {

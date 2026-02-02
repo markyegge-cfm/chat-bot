@@ -1,7 +1,7 @@
 /**
  * Firebase Service
- * Stores knowledge base metadata (Q&A pairs) in Firestore
- * while Vertex AI RAG stores the actual document content for semantic search
+ * Stores knowledge base metadata (Q&A pairs) in Firestore.
+ * Vertex AI RAG stores the actual document content for semantic search.
  */
 
 import admin from 'firebase-admin';
@@ -10,27 +10,26 @@ import { getFirestore } from 'firebase-admin/firestore';
 
 interface KnowledgeMetadata {
   id: string;
-  ragFileId: string; // ID from Vertex AI RAG (for single file or representative file)
-  ragFileIds?: string[]; // IDs from Vertex AI RAG (for multiple chunks)
+  ragFileId: string;
+  ragFileIds?: string[];
   question: string;
   answer: string;
   type: 'manual' | 'csv' | 'pdf' | 'docx';
   status: 'PROCESSING' | 'COMPLETED' | 'FAILED';
   createdAt: string;
   updatedAt: string;
-  fileUrl?: string; // For original files stored in Firebase Storage
+  fileUrl?: string;
 }
 
 export interface Escalation {
   id: string;
-  user: string;     // Email
-  question: string; // The question that failed
-  sessionId: string; // The session ID where it happened
-  date: string;     // ISO string
+  user: string;
+  question: string;
+  sessionId: string;
+  date: string;
   status: 'open' | 'resolved';
 }
 
-// Define the Admin User structure
 interface AdminUser {
   uid: string;
   email: string;
@@ -42,12 +41,10 @@ class FirebaseService {
   private auth: admin.auth.Auth | null = null;
   private bucket: any | null = null;
   private initialized: boolean = false;
-  // Fallback to 'chatbot-rag' if FIRESTORE_DATABASE_ID is not in .env
   private databaseId: string = process.env.FIRESTORE_DATABASE_ID || 'chatbot-rag';
 
   /**
-   * Initialize Firebase Admin SDK
-   * Uses Application Default Credentials (same as Vertex AI)
+   * Initialize Firebase Admin SDK using Application Default Credentials.
    */
   async initialize(): Promise<void> {
     try {
@@ -66,33 +63,21 @@ class FirebaseService {
         });
       }
 
-      /**
-       * CRITICAL FIX: Explicitly target the named database.
-       * If your database in GCP is named 'chatbot-rag', calling admin.firestore() 
-       * without arguments will look for '(default)' and return a NOT_FOUND error.
-       */
       this.db = getFirestore(this.databaseId);
 
-      // Enable ignoreUndefinedProperties to handle cases where fields might be undefined
       this.db.settings({ ignoreUndefinedProperties: true });
 
-      // Initialize Auth
       this.auth = getAuth();
 
-      // Initialize Storage - specify the default bucket for the project
-      // Format: project-id.appspot.com
       const bucketName = process.env.STORAGE_BUCKET || `${process.env.PROJECT_ID}.appspot.com`;
       console.log(`🪣 Initializing Storage bucket: ${bucketName}`);
       this.bucket = admin.storage().bucket(bucketName);
 
-      // Check/Create bucket
       try {
         const [exists] = await this.bucket.exists();
         if (!exists) {
           console.log(`⚠️  Bucket ${bucketName} does not exist. Attempting to create...`);
           try {
-            // Default location 'US' or try to infer. Vertex Service used config.location.
-            // Here we don't hold location config easily, but 'us-central1' or 'US' is safe default.
             await this.bucket.create({ location: process.env.LOCATION || 'us-central1' });
             console.log(`✅ Created bucket: ${bucketName}`);
           } catch (e: any) {
@@ -113,23 +98,22 @@ class FirebaseService {
   }
 
   /**
-   * Check if service is initialized
+   * Check if service is initialized.
    */
   isInitialized(): boolean {
     return this.initialized && this.db !== null;
   }
 
   /**
-   * Get the Firestore instance (for use by other services)
+   * Get the Firestore instance for use by other services.
    */
   getDb(): admin.firestore.Firestore | null {
     return this.db;
   }
 
   /**
-   * 🔐 Verify Admin Token
-   * 1. Decodes the ID Token sent from Frontend
-   * 2. Checks if the user exists in the 'admins' Firestore collection
+   * Verify Admin Token.
+   * Decodes the ID Token and validates user credentials.
    */
   async verifyAdminToken(idToken: string): Promise<AdminUser> {
     if (!this.auth) {
@@ -137,14 +121,13 @@ class FirebaseService {
     }
 
     try {
-      // 1. Verify the integrity of the token with Firebase Auth
       const decodedToken = await this.auth!.verifyIdToken(idToken);
       const { email, uid } = decodedToken;
 
       return {
         uid,
         email: email || 'anonymous',
-        role: 'admin' // Default to admin since only admins are in this project's Auth
+        role: 'admin'
       };
 
     } catch (error) {
@@ -154,7 +137,7 @@ class FirebaseService {
   }
 
   /**
-   * Search cache for a previously answered identical question
+   * Search cache for a previously answered identical question.
    */
   async getCachedAnswer(question: string): Promise<string | null> {
     if (!this.db) await this.initialize();
@@ -181,7 +164,7 @@ class FirebaseService {
   }
 
   /**
-   * Save a new Q&A pair to the public cache
+   * Save a new Q&A pair to the cache.
    */
   async saveToCache(question: string, answer: string): Promise<void> {
     if (!this.db) await this.initialize();
@@ -207,7 +190,7 @@ class FirebaseService {
   }
 
   /**
-   * Save knowledge metadata to Firestore
+   * Save knowledge metadata to Firestore.
    */
   async saveKnowledge(data: Omit<KnowledgeMetadata, 'id'>): Promise<KnowledgeMetadata> {
     if (!this.db) await this.initialize();
@@ -243,7 +226,7 @@ class FirebaseService {
   }
 
   /**
-   * Get all knowledge items
+   * Get all knowledge items.
    */
   async getAllKnowledge(): Promise<KnowledgeMetadata[]> {
     if (!this.db) await this.initialize();
@@ -456,12 +439,8 @@ class FirebaseService {
     }
   }
 
-  // ============================================
-  // CONVERSATION METHODS
-  // ============================================
-
   /**
-   * Start a new conversation session
+   * Start a new conversation session.
    */
   async startConversation(sessionId: string, userIdentifier?: string): Promise<void> {
     if (!this.db) await this.initialize();
@@ -641,12 +620,8 @@ class FirebaseService {
     }
   }
 
-  // ============================================
-  // ESCALATION METHODS
-  // ============================================
-
   /**
-   * Create a new escalation record
+   * Create a new escalation record.
    */
   async createEscalation(data: Omit<Escalation, 'id' | 'date'>): Promise<string> {
     if (!this.db) await this.initialize();

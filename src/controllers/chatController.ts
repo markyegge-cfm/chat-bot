@@ -3,7 +3,6 @@ import type { Request, Response } from 'express';
 import firebaseService from '../services/firebaseService';
 import { FALLBACK_MESSAGE, vertexAIRag } from '../services/vertexAIRagService';
 
-// Define the state interface
 interface ChatState {
   message: string;
   answer: string;
@@ -11,105 +10,64 @@ interface ChatState {
   cached: boolean;
 }
 
-// Create the workflow with proper __root__ channel
-const workflow = new StateGraph<{ __root__: any }>({
+// @ts-ignore - LangGraph typing complexity
+const workflow = new StateGraph<ChatState>({
   channels: {
-    __root__: {
-      value: (x: ChatState) => x,
-      default: () => ({
-        message: '',
-        answer: '',
-        sessionId: '',
-        cached: false
-      }),
-      reducer: (current: ChatState, update: Partial<ChatState>) => ({
-        ...current,
-        ...update
-      })
+    message: {
+      value: (x?: string, y?: string) => y ?? x ?? '',
+      default: () => ''
+    },
+    answer: {
+      value: (x?: string, y?: string) => y ?? x ?? '',
+      default: () => ''
+    },
+    sessionId: {
+      value: (x?: string, y?: string) => y ?? x ?? '',
+      default: () => ''
+    },
+    cached: {
+      value: (x?: boolean, y?: boolean) => y ?? x ?? false,
+      default: () => false
     }
   }
 })
-  .addNode("check_cache", async (state: any) => {
+  // @ts-ignore - LangGraph typing complexity
+  .addNode("check_cache", async (state: ChatState) => {
     try {
-      const currentState = state.__root__.value as ChatState;
-      const { message, sessionId } = currentState;
+      const { message, sessionId } = state;
 
       if (!message) {
-        return {
-          __root__: {
-            value: {
-              message: '',
-              answer: "No message provided",
-              sessionId,
-              cached: false
-            }
-          }
-        };
+        return { answer: "No message provided", cached: false };
       }
 
-      // Check cache first
       console.log(`Checking cache for: ${message.substring(0, 50)}...`);
       const cachedAnswer = await firebaseService.getCachedAnswer(message);
 
       if (cachedAnswer) {
         console.log(`Cache hit for message: ${message.substring(0, 50)}...`);
-        return {
-          __root__: {
-            value: {
-              ...currentState,
-              answer: cachedAnswer,
-              cached: true
-            }
-          }
-        };
+        return { answer: cachedAnswer, cached: true };
       }
 
-      // No cache hit
       console.log('No cache hit');
-      return {
-        __root__: {
-          value: {
-            ...currentState,
-            cached: false
-          }
-        }
-      };
+      return { cached: false };
     } catch (error) {
       console.error('Error in check_cache node:', error);
-      return {
-        __root__: {
-          value: {
-            message: '',
-            answer: "Error checking cache",
-            sessionId: '',
-            cached: false
-          }
-        }
-      };
+      return { answer: "Error checking cache", cached: false };
     }
   })
-  .addNode("rag_retrieval", async (state: any) => {
+  .addNode("rag_retrieval", async (state: ChatState) => {
     try {
-      const currentState = state.__root__.value as ChatState;
-      const { message, sessionId } = currentState;
+      const { message, sessionId } = state;
 
       if (!message) {
-        return {
-          __root__: {
-            value: {
-              message: '',
-              answer: "No message provided",
-              sessionId,
-              cached: false
-            }
-          }
-        };
+        return { answer: "No message provided", cached: false };
       }
 
       console.log(`RAG retrieval for: ${message.substring(0, 50)}...`);
       const answer = await vertexAIRag.retrieveContextsWithRAG(message, 5);
 
-      // Save to cache for future use (ONLY if it's not a fallback message)
+      console.log(`RAG returned answer (length: ${answer.length}): ${answer.substring(0, 100)}...`);
+
       if (answer !== FALLBACK_MESSAGE) {
         try {
           await firebaseService.saveToCache(message, answer);
@@ -119,85 +77,49 @@ const workflow = new StateGraph<{ __root__: any }>({
         }
       }
 
-      return {
-        __root__: {
-          value: {
-            ...currentState,
-            answer,
-            cached: false
-          }
-        }
-      };
+      return { answer, cached: false };
     } catch (error) {
       console.error('Error in rag_retrieval node:', error);
-      return {
-        __root__: {
-          value: {
-            ...state.__root__.value,
-            answer: "Sorry, I encountered an error while processing your request.",
-            cached: false
-          }
-        }
-      };
+      return { answer: "Sorry, I encountered an error while processing your request.", cached: false };
     }
   })
-  .addNode("format_response", async (state: any) => {
+  .addNode("format_response", async (state: ChatState) => {
     try {
-      const currentState = state.__root__.value as ChatState;
-      const { answer, cached } = currentState;
-
+      const { answer, cached } = state;
       let finalAnswer = answer;
+      
       if (cached && answer) {
         finalAnswer = `${answer}`;
       }
 
-      return {
-        __root__: {
-          value: {
-            ...currentState,
-            answer: finalAnswer
-          }
-        }
-      };
+      return { answer: finalAnswer };
     } catch (error) {
       console.error('Error in format_response node:', error);
-      return {
-        __root__: {
-          value: state.__root__.value
-        }
-      };
+      return {};
     }
   });
 
-// Set up the graph with conditional routing
 workflow
   .addEdge("__start__", "check_cache")
-  .addConditionalEdges("check_cache", (state: any) => {
-    const currentState = state.__root__.value as ChatState;
-    return currentState.cached ? "format_response" : "rag_retrieval";
+  .addConditionalEdges("check_cache", (state: ChatState) => {
+    return state.cached ? "format_response" : "rag_retrieval";
   })
   .addEdge("rag_retrieval", "format_response")
   .addEdge("format_response", "__end__");
 
-// Add memory for session persistence
 const memory = new MemorySaver();
 const graph = workflow.compile({ checkpointer: memory });
 
-/**
- * Utility to detect emails in strings
- */
 function extractEmail(text: string): string | null {
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
   const match = text.match(emailRegex);
   return match ? match[0] : null;
 }
 
-/**
- * Stream text with realistic typing speed
- * Sends chunks character by character with slight delays for smooth animation
- */
+const TYPING_DELAY_CACHED = 15;
+const TYPING_DELAY_GENERATED = 30;
+
 async function streamTextToResponse(res: Response, text: string, metadata: { isCached: boolean; sessionId: string }) {
-  // Stream in smaller chunks for smoother animation
   const words = text.split(' ');
   
   for (let i = 0; i < words.length; i++) {
@@ -209,9 +131,7 @@ async function streamTextToResponse(res: Response, text: string, metadata: { isC
       ...metadata
     })}\n\n`);
 
-    // Add small delay between words for realistic typing effect
-    // Faster for cached responses, slower for generated ones
-    const delay = metadata.isCached ? 15 : 30;
+    const delay = metadata.isCached ? TYPING_DELAY_CACHED : TYPING_DELAY_GENERATED;
     await new Promise(resolve => setTimeout(resolve, delay));
   }
 }
@@ -256,9 +176,6 @@ export class ChatController {
         }
       }
 
-      // ==========================================
-      // ESCALATION LOGIC (Check for Email Response)
-      // ==========================================
       const email = extractEmail(message);
       if (email) {
         console.log(`📧 Detected email in user message: ${email}`);
@@ -327,18 +244,12 @@ export class ChatController {
         }
       }
 
-      // ==========================================
-      // NORMAL FLOW (LangGraph)
-      // ==========================================
-
-      // Set up config with thread_id for memory
       const config = {
         configurable: {
           thread_id: sessionId
         }
       };
 
-      // Create initial state
       const initialState: ChatState = {
         message: message.trim(),
         sessionId,
@@ -348,21 +259,16 @@ export class ChatController {
 
       console.log('Invoking LangGraph...');
 
-      const result = await graph.invoke(
-        { __root__: { value: initialState } },
-        config
-      );
+      // @ts-ignore - LangGraph typing complexity
+      const result = await graph.invoke(initialState, config) as unknown as ChatState;
 
-      // Type assertion to access the result
-      const resultState = (result as any).__root__?.value as ChatState;
-      let answer = resultState?.answer || 'Sorry, I could not generate a response.';
-      const isCached = resultState?.cached || false;
+      let answer = result.answer || 'Sorry, I could not generate a response.';
+      const isCached = result.cached || false;
 
-      // Extract and remove follow-up questions before streaming
       let followupQuestions: string[] = [];
       const followupMatch = answer.match(/<<<FOLLOWUP: (.*?)>>>/);
       if (followupMatch) {
-        followupQuestions = followupMatch[1].split('|').map(q => q.trim()).filter(q => q);
+        followupQuestions = followupMatch[1].split('|').map((q: string) => q.trim()).filter((q: string) => q);
         answer = answer.replace(followupMatch[0], '').trim();
       }
 
