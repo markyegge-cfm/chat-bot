@@ -11,7 +11,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 interface KnowledgeMetadata {
   id: string;
   ragFileId: string;
-  ragFileIds?: string[];
+  ragFileIds?: string[]; // All versions of this knowledge item
   question: string;
   answer: string;
   type: 'manual' | 'csv' | 'pdf' | 'docx';
@@ -186,6 +186,41 @@ class FirebaseService {
         });
     } catch (error) {
       console.error('Failed to save to cache:', error);
+    }
+  }
+
+  /**
+   * Clear all cached responses to ensure fresh answers after knowledge updates.
+   * Called when new knowledge is added or existing knowledge is updated.
+   */
+  async clearAllCache(): Promise<void> {
+    if (!this.db) await this.initialize();
+
+    try {
+      const appId = process.env.PROJECT_ID || 'default';
+      const cacheRef = this.db!
+        .collection('artifacts')
+        .doc(appId)
+        .collection('public')
+        .doc('data')
+        .collection('chat_cache');
+
+      const snapshot = await cacheRef.get();
+      
+      if (snapshot.empty) {
+        console.log('✅ Cache already empty');
+        return;
+      }
+
+      const batch = this.db!.batch();
+      snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+
+      await batch.commit();
+      console.log(`✅ Cleared ${snapshot.size} cached responses`);
+    } catch (error) {
+      console.error('❌ Failed to clear cache:', error);
     }
   }
 
@@ -380,22 +415,27 @@ class FirebaseService {
   }
 
   /**
-   * Delete PDF file from Firebase Storage
+   * Delete uploaded file (PDF/DOCX) from Firebase Storage
    */
   async deletePdfFile(knowledgeId: string): Promise<void> {
     if (!this.bucket) await this.initialize();
 
     try {
-      // Get all files in the knowledge PDF directory
+      // Get all files in the knowledge directory
       const [files] = await this.bucket!.getFiles({ prefix: `pdfs/${knowledgeId}/` });
+
+      if (files.length === 0) {
+        console.log(`ℹ️  No storage files found for knowledge: ${knowledgeId}`);
+        return;
+      }
 
       // Delete all files
       const deletePromises = files.map((file: any) => file.delete());
       await Promise.all(deletePromises);
 
-      console.log(`✅ Deleted PDF files for knowledge: ${knowledgeId}`);
+      console.log(`✅ Deleted ${files.length} storage file(s) for knowledge: ${knowledgeId}`);
     } catch (error: any) {
-      console.warn(`⚠️  Could not delete PDF files for ${knowledgeId}:`, error.message);
+      console.warn(`⚠️  Could not delete storage files for ${knowledgeId}:`, error.message);
     }
   }
 

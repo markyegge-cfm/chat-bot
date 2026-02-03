@@ -154,32 +154,32 @@ class BackgroundTaskService {
   }
 
   /**
-   * Handle RAG update (delete old + upload new) in background
+   * Handle RAG update (upload new version) in background.
+   * Old files are NOT deleted - we keep all versions in RAG.
+   * The [Effective Date] stamp ensures AI prioritizes the newest content.
    */
   private async handleUpdateRag(task: BackgroundTask): Promise<void> {
-    const { oldRagFileId, tempFilePath, displayName, description } = task.data;
+    const { tempFilePath, displayName, description } = task.data;
 
     try {
-      // Delete old file
-      if (oldRagFileId) {
-        await vertexAIRag.deleteFile(oldRagFileId);
-        console.log(`✅ Old RAG file deleted: ${oldRagFileId}`);
-      }
-
-      // Upload new file
+      // Upload new version (old versions remain in RAG for historical reference)
       const ragFile = await vertexAIRag.uploadFile(
         tempFilePath,
         displayName,
         description
       );
 
-      // Update Firebase with new RAG file ID
+      // Update Firebase with new RAG file ID (keep old ones in ragFileIds array)
+      const existingKnowledge = await firebaseService.getKnowledgeById(task.knowledgeId);
+      const oldIds = existingKnowledge?.ragFileIds || (existingKnowledge?.ragFileId ? [existingKnowledge.ragFileId] : []);
+      
       await firebaseService.updateKnowledge(task.knowledgeId, {
-        ragFileId: ragFile.name,
+        ragFileId: ragFile.name, // Most recent
+        ragFileIds: [...oldIds, ragFile.name], // All versions
         status: 'COMPLETED',
       });
 
-      console.log(`✅ RAG Update completed for ${task.knowledgeId}: ${ragFile.name}`);
+      console.log(`✅ RAG Update completed for ${task.knowledgeId}: ${ragFile.name} (${oldIds.length} older versions preserved)`);
     } finally {
       // Clean up temp file
       try {

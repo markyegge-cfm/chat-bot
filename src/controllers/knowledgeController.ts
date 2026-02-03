@@ -18,6 +18,9 @@ function ensureTempDir() {
   }
 }
 
+const getTodayDate = () => new Date().toISOString().split('T')[0];
+const getEffectiveTimestamp = () => new Date().toISOString(); // Full timestamp for precise ordering
+
 export const getAllKnowledge = async (req: Request, res: Response): Promise<void> => {
   try {
     const knowledgeItems = await firebaseService.getAllKnowledge();
@@ -93,13 +96,16 @@ export const createKnowledge = async (req: Request, res: Response): Promise<void
 
     ensureTempDir();
     const tempFile = path.join(RAG_TEMP_DIR, `upload_${Date.now()}_${knowledgeData.id}.txt`);
-    fs.writeFileSync(tempFile, `Q: ${question.trim()}\n\nA: ${answer.trim()}`);
+    fs.writeFileSync(tempFile, `[Effective Date: ${getEffectiveTimestamp()}]\n\nQ: ${question.trim()}\n\nA: ${answer.trim()}`);
 
     backgroundTaskService.queueTask('UPLOAD_RAG', knowledgeData.id, {
       tempFilePath: tempFile,
       displayName: question.substring(0, 100),
       description: answer.substring(0, 500),
     });
+
+    // Clear cache to ensure new knowledge is used
+    await firebaseService.clearAllCache();
 
     (res as any).status(201).json({
       success: true,
@@ -146,14 +152,16 @@ export const updateKnowledge = async (req: Request, res: Response): Promise<void
 
     ensureTempDir();
     const tempFile = path.join(RAG_TEMP_DIR, `update_${Date.now()}_${id}.txt`);
-    fs.writeFileSync(tempFile, `Q: ${question.trim()}\n\nA: ${answer.trim()}`);
+    fs.writeFileSync(tempFile, `[Effective Date: ${getEffectiveTimestamp()}]\n\nQ: ${question.trim()}\n\nA: ${answer.trim()}`);
 
     backgroundTaskService.queueTask('UPDATE_RAG', id, {
-      oldRagFileId: knowledge.ragFileId,
       tempFilePath: tempFile,
       displayName: question.substring(0, 100),
       description: answer.substring(0, 500),
     });
+
+    // Clear cache to ensure updated knowledge is used
+    await firebaseService.clearAllCache();
 
     (res as any).json({
       success: true,
@@ -196,7 +204,7 @@ export const deleteKnowledge = async (req: Request, res: Response): Promise<void
         try {
           await firebaseService.deletePdfFile(id);
         } catch (error: any) {
-          console.warn(`⚠️  Could not delete file:`, error.message);
+          console.warn(`⚠️  Could not delete ${knowledge.type.toUpperCase()} file:`, error.message);
         }
       }
     } catch (error: any) {
@@ -205,12 +213,20 @@ export const deleteKnowledge = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // Queue RAG deletion
-    if (knowledge.ragFileId) {
+    // Queue RAG deletion for ALL versions (ragFileIds array + single ragFileId)
+    const ragFileIdsToDelete = knowledge.ragFileIds || [];
+    if (knowledge.ragFileId && !ragFileIdsToDelete.includes(knowledge.ragFileId)) {
+      ragFileIdsToDelete.push(knowledge.ragFileId);
+    }
+
+    if (ragFileIdsToDelete.length > 0) {
       backgroundTaskService.queueTask('DELETE_RAG', id, {
-        ragFileId: knowledge.ragFileId,
+        ragFileIds: ragFileIdsToDelete,
       });
     }
+
+    // Clear cache to remove any cached answers from deleted knowledge
+    await firebaseService.clearAllCache();
 
     (res as any).json({
       success: true,
@@ -255,7 +271,7 @@ export const uploadCSV = async (req: Request, res: Response): Promise<void> => {
 
         // Create temp file
         const tempFile = path.join(RAG_TEMP_DIR, `csv_${Date.now()}_${i}.txt`);
-        const content = `Q: ${item.question.trim()}\n\nA: ${item.answer.trim()}`;
+        const content = `[Effective Date: ${getEffectiveTimestamp()}]\n\nQ: ${item.question.trim()}\n\nA: ${item.answer.trim()}`;
         fs.writeFileSync(tempFile, content);
 
         // Queue background upload
@@ -270,6 +286,9 @@ export const uploadCSV = async (req: Request, res: Response): Promise<void> => {
         console.error(`❌ CSV row ${i + 1} error:`, error);
       }
     }
+
+    // Clear cache to ensure new CSV knowledge is used
+    await firebaseService.clearAllCache();
 
     (res as any).status(201).json({
       success: true,
@@ -341,7 +360,7 @@ export const uploadDocx = async (req: Request, res: Response): Promise<void> => 
 
       // Create full text file (Vertex AI will chunk it)
       const fullTextFile = path.join(RAG_TEMP_DIR, `full_${knowledge.id}.txt`);
-      fs.writeFileSync(fullTextFile, extractedText);
+      fs.writeFileSync(fullTextFile, `[Effective Date: ${getEffectiveTimestamp()}]\n\n${extractedText}`);
 
       // Queue upload
       backgroundTaskService.queueTask('UPLOAD_RAG', knowledge.id, {
@@ -352,6 +371,9 @@ export const uploadDocx = async (req: Request, res: Response): Promise<void> => 
 
       // Clean up
       try { fs.unlinkSync(tempDocxPath); } catch (e) { }
+
+      // Clear cache to ensure new DOCX content is used immediately
+      await firebaseService.clearAllCache();
 
       (res as any).status(201).json({
         success: true,
@@ -383,6 +405,126 @@ export const uploadPDF = async (req: Request, res: Response): Promise<void> => {
   });
 };
 
+/**
+ * PUT /api/knowledge/:id/docx
+ * Update an existing DOCX knowledge item with a new version.
+ * Deletes old RAG file and uploads new version with current date for priority.
+ */
+export const updateDocx = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params as { id: string };
+    const { filename, content, title, description } = req.body;
+
+    if (!id) {
+      (res as any).status(400).json({ success: false, error: 'Knowledge ID required' });
+      return;
+    }
+
+    if (!filename || !content) {
+      (res as any).status(400).json({ success: false, error: 'Filename and content are required' });
+      return;
+    }
+
+    // Get existing knowledge
+    let existingKnowledge = null;
+    try {
+      existingKnowledge = await firebaseService.getKnowledgeById(id);
+    } catch (e) {
+      console.warn('⚠️  Could not fetch existing knowledge from Firebase');
+    }
+
+    if (!existingKnowledge) {
+      (res as any).status(404).json({ success: false, error: 'Knowledge item not found' });
+      return;
+    }
+
+    if (existingKnowledge.type !== 'docx') {
+      (res as any).status(400).json({ 
+        success: false, 
+        error: 'This endpoint is only for DOCX files. Use PUT /api/knowledge/:id for other types.' 
+      });
+      return;
+    }
+
+    ensureTempDir();
+
+    try {
+      const buffer = Buffer.from(content, 'base64');
+      const tempDocxPath = path.join(RAG_TEMP_DIR, `update_${Date.now()}_${filename}`);
+      fs.writeFileSync(tempDocxPath, buffer);
+
+      // Extract text
+      let extractedText = "";
+      try {
+        const result = await mammoth.extractRawText({ path: tempDocxPath });
+        extractedText = result.value;
+        console.log(`📄 Extracted ${extractedText.length} characters from updated docx`);
+      } catch (extractError) {
+        console.error('❌ Mammoth extraction failed:', extractError);
+        throw new Error('Failed to extract text from document');
+      }
+
+      // Update metadata in Firebase
+      await firebaseService.updateKnowledge(id, {
+        question: title || filename,
+        answer: description || (extractedText.substring(0, 500) + (extractedText.length > 500 ? '...' : '')),
+        status: 'PROCESSING',
+        updatedAt: new Date().toISOString(),
+      });
+
+      // Upload new version to Firebase Storage (overwrite old file)
+      let fileUrl = '';
+      try {
+        fileUrl = await firebaseService.uploadPdfFile(buffer, filename, id);
+        console.log(`✅ Updated file uploaded to Storage: ${fileUrl}`);
+      } catch (storageError: any) {
+        console.error('❌ Failed to upload to Storage:', storageError.message);
+      }
+
+      if (fileUrl) {
+        await firebaseService.updateKnowledge(id, { fileUrl });
+      }
+
+      // Create full text file with TODAY'S date for priority
+      const fullTextFile = path.join(RAG_TEMP_DIR, `update_full_${id}_${Date.now()}.txt`);
+      fs.writeFileSync(fullTextFile, `[Effective Date: ${getEffectiveTimestamp()}]\n\n${extractedText}`);
+
+      // Queue UPDATE_RAG task (will upload new version, old versions preserved)
+      backgroundTaskService.queueTask('UPDATE_RAG', id, {
+        tempFilePath: fullTextFile,
+        displayName: title || filename.substring(0, 100),
+        description: description || `Updated from: ${filename}`,
+      });
+
+      // Clean up temp file
+      try { fs.unlinkSync(tempDocxPath); } catch (e) { }
+
+      // Clear cache to ensure new version is used immediately
+      await firebaseService.clearAllCache();
+
+      (res as any).json({
+        success: true,
+        message: 'DOCX update queued for processing. New version will take priority.',
+        data: {
+          id,
+          title: title || filename,
+          filename,
+          type: 'docx',
+          fileUrl,
+          status: 'PROCESSING',
+          updatedAt: new Date().toISOString(),
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ DOCX update processing error:', error);
+      (res as any).status(500).json({ success: false, error: error.message });
+    }
+  } catch (error: any) {
+    console.error('❌ DOCX update error:', error);
+    (res as any).status(500).json({ success: false, error: error.message });
+  }
+};
+
 export const batchDeleteKnowledge = async (req: Request, res: Response): Promise<void> => {
   try {
     const { ids } = req.body;
@@ -401,9 +543,17 @@ export const batchDeleteKnowledge = async (req: Request, res: Response): Promise
           if (knowledge.type === 'pdf' || knowledge.type === 'docx') {
             try { await firebaseService.deletePdfFile(id); } catch (e) { }
           }
-          if (knowledge.ragFileId) {
-            backgroundTaskService.queueTask('DELETE_RAG', id, { ragFileId: knowledge.ragFileId });
+          
+          // Delete ALL RAG file versions
+          const ragFileIdsToDelete = knowledge.ragFileIds || [];
+          if (knowledge.ragFileId && !ragFileIdsToDelete.includes(knowledge.ragFileId)) {
+            ragFileIdsToDelete.push(knowledge.ragFileId);
           }
+          
+          if (ragFileIdsToDelete.length > 0) {
+            backgroundTaskService.queueTask('DELETE_RAG', id, { ragFileIds: ragFileIdsToDelete });
+          }
+          
           results.successful++;
         } else {
           results.failed++;
@@ -412,6 +562,9 @@ export const batchDeleteKnowledge = async (req: Request, res: Response): Promise
         results.failed++;
       }
     }
+
+    // Clear cache after batch deletion
+    await firebaseService.clearAllCache();
 
     (res as any).json({
       success: true,

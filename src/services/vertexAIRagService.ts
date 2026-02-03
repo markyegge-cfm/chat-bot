@@ -335,14 +335,33 @@ class VertexAIRagService {
     const corpusResource = `projects/${this.config.projectId}/locations/${this.config.location}/ragCorpora/${this.config.corpusId}`;
     const geminiUrl = `https://${this.config.location}-aiplatform.googleapis.com/v1beta1/projects/${this.config.projectId}/locations/${this.config.location}/publishers/google/models/gemini-2.5-flash:generateContent`;
 
-    try {
-      console.log(`🔍 Making RAG API call for: ${query.substring(0, 50)}...`);
+    // Retry with exponential backoff for 429 errors
+    const maxRetries = 3;
+    let lastError: any = null;
 
-      const systemPrompt = `You are a helpful and professional customer service AI assistant.
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        if (attempt > 1) {
+          const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 8000); // 2s, 4s, 8s
+          console.log(`⏳ Retry attempt ${attempt}/${maxRetries} after ${delayMs}ms delay...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        } else {
+          console.log(`🔍 Making RAG API call for: ${query.substring(0, 50)}...`);
+        }
+
+        const systemPrompt = `You are a helpful and professional customer service AI assistant.
 
 **Greeting Handling**: Respond warmly to greetings. For "Hi", "Hello", etc., say "Hi there! 👋 How can I help you today?"
 
 **Knowledge Base Answers**: The knowledge base consists of Question and Answer pairs. 
+
+**Handling Multiple or Conflicting Information**:
+- The knowledge base content includes an [Effective Date: YYYY-MM-DDTHH:MM:SS.sssZ] timestamp at the beginning of each piece of content.
+- If you retrieve multiple pieces of information that could answer the same question, **ALWAYS compare the Effective Date timestamps**.
+- **CRITICAL RULE**: Use ONLY the information from the content with the most recent (latest) timestamp.
+- Completely ignore older information - treat it as if it doesn't exist.
+- Example: If you see "[Effective Date: 2026-02-03T10:30:00.000Z]" and "[Effective Date: 2026-02-03T09:15:00.000Z]", use ONLY the 10:30 AM content.
+- This ensures users always get the most up-to-date information, even if multiple versions exist from the same day.
 
 **STRICT VERBATIM RULE**:
 1. When a user asks a question found in the context, your response MUST be the **full, exact, and verbatim content** of the answer from the context.
@@ -360,48 +379,68 @@ Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
 
 **Follow-up Questions**: After providing the answer, suggest 2-3 short, relevant follow-up questions the user might ask next. Format them exactly like this at the end of your response:
 <<<FOLLOWUP: Question 1 | Question 2 | Question 3>>>`;
-      const res = await this.client.post(geminiUrl, {
-        systemInstruction: {
-          role: 'user',
-          parts: [{ text: systemPrompt }]
-        },
-        contents: [{ role: 'user', parts: [{ text: query }] }],
-        tools: [{
-          retrieval: {
-            vertexRagStore: {
-              ragResources: [{ ragCorpus: corpusResource }],
-              similarityTopK: topK,
-            },
+        
+        const res = await this.client.post(geminiUrl, {
+          systemInstruction: {
+            role: 'user',
+            parts: [{ text: systemPrompt }]
           },
-        }],
-        generationConfig: {
-          temperature: RAG_CONFIG.GENERATION_TEMPERATURE,
-          topP: RAG_CONFIG.GENERATION_TOP_P,
-          topK: RAG_CONFIG.GENERATION_TOP_K,
-          maxOutputTokens: RAG_CONFIG.MAX_OUTPUT_TOKENS,
-        },
-      });
+          contents: [{ role: 'user', parts: [{ text: query }] }],
+          tools: [{
+            retrieval: {
+              vertexRagStore: {
+                ragResources: [{ ragCorpus: corpusResource }],
+                similarityTopK: topK,
+              },
+            },
+          }],
+          generationConfig: {
+            temperature: RAG_CONFIG.GENERATION_TEMPERATURE,
+            topP: RAG_CONFIG.GENERATION_TOP_P,
+            topK: RAG_CONFIG.GENERATION_TOP_K,
+            maxOutputTokens: RAG_CONFIG.MAX_OUTPUT_TOKENS,
+          },
+        });
 
-      const candidate = res.data?.candidates?.[0];
-      let answer = candidate?.content?.parts?.[0]?.text || '';
+        const candidate = res.data?.candidates?.[0];
+        let answer = candidate?.content?.parts?.[0]?.text || '';
 
-      if (res.data?.candidates?.[0]?.groundingMetadata) {
-        console.log('✅ Grounding metadata found - RAG is working!');
+        if (res.data?.candidates?.[0]?.groundingMetadata) {
+          console.log('✅ Grounding metadata found - RAG is working!');
+        }
+
+        if (!answer || answer.length < 15) {
+          console.warn('[RAG] No answer generated or too short. Returning fallback.');
+          answer = FALLBACK_MESSAGE;
+        }
+
+        return answer;
+        
+      } catch (err: any) {
+        lastError = err;
+        
+        // Check if it's a 429 rate limit error
+        const is429 = err.response?.status === 429 || err.response?.data?.error?.code === 429;
+        
+        if (is429 && attempt < maxRetries) {
+          console.warn(`⚠️  Rate limit hit (429). Retrying... (${attempt}/${maxRetries})`);
+          continue; // Retry
+        } else if (is429) {
+          console.error('❌ Rate limit exhausted after retries. Returning fallback.');
+          return 'I apologize, but our system is experiencing high demand right now. Please try again in a moment.';
+        }
+        
+        // For non-429 errors, fail immediately
+        console.error('[RAG] Error:', err.message);
+        if (err.response) {
+          console.error('[RAG] Response data:', JSON.stringify(err.response.data, null, 2));
+        }
+        break;
       }
-
-      if (!answer || answer.length < 15) {
-        console.warn('[RAG] No answer generated or too short. Returning fallback.');
-        answer = FALLBACK_MESSAGE;
-      }
-
-      return answer;
-    } catch (err: any) {
-      console.error('[RAG] Error:', err.message);
-      if (err.response) {
-        console.error('[RAG] Response data:', JSON.stringify(err.response.data, null, 2));
-      }
-      return FALLBACK_MESSAGE;
     }
+
+    // If we get here, a non-retryable error occurred
+    return FALLBACK_MESSAGE;
   }
 
   /**
@@ -514,8 +553,12 @@ Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
     console.log(`📤 Direct Uploading ${displayName}...`);
 
     try {
+      // Prepend date for recency prioritization (use full ISO timestamp for precision)
+      const timestamp = new Date().toISOString();
+      const datedContent = `[Effective Date: ${timestamp}]\n\n${content}`;
+
       // Convert content to base64
-      const base64Content = Buffer.from(content).toString('base64');
+      const base64Content = Buffer.from(datedContent).toString('base64');
 
       const res = await this.client.post(uploadUrl, {
         ragFile: {
