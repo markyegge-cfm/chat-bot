@@ -94,9 +94,13 @@ class EmailService {
 
     async sendPasswordResetEmail(email: string, resetLink: string) {
         if (!this.isConfigured || !this.transporter) {
-            console.warn('📧 Cannot send email: SMTP not configured');
-            return;
+            console.error('❌ Cannot send password reset email: SMTP not configured');
+            console.error('Missing environment variables. Check: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS');
+            return false;
         }
+
+        console.log(`📧 Preparing password reset email for: ${email}`);
+        console.log(`📧 SMTP Config - Host: ${process.env.SMTP_HOST}, Port: ${process.env.SMTP_PORT}, User: ${process.env.SMTP_USER}`);
 
         const mailOptions = {
             from: `"ChatBot Security" <${process.env.SMTP_USER}>`,
@@ -126,11 +130,18 @@ class EmailService {
         };
 
         try {
-            await this.transporter.sendMail(mailOptions);
-            console.log(`📧 Password reset email sent to ${email}`);
+            console.log('📧 Sending password reset email...');
+            const info = await this.transporter.sendMail(mailOptions);
+            console.log(`✅ Password reset email sent successfully to ${email}`);
+            console.log(`📧 Message ID: ${info.messageId}`);
             return true;
-        } catch (error) {
+        } catch (error: any) {
             console.error('❌ Failed to send password reset email:', error);
+            console.error('Error details:', {
+                message: error.message,
+                code: error.code,
+                response: error.response
+            });
             return false;
         }
     }

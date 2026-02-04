@@ -116,30 +116,56 @@ router.post('/api/auth/forgot-password', async (req: Request, res: Response): Pr
   }
 
   try {
+    console.log(`🔐 Password reset requested for: ${email}`);
+    
     // 1. Verify service is initialized
     if (!firebaseService.isInitialized()) {
       await firebaseService.initialize();
     }
 
-    // 2. Generate Reset Link via Firebase Admin
+    // 2. Check if user exists first
+    try {
+      await admin.auth().getUserByEmail(email);
+      console.log(`✅ User found: ${email}`);
+    } catch (userError: any) {
+      console.warn(`⚠️ User not found: ${email}`);
+      // Return generic success to prevent email enumeration
+      (res as any).json({
+        success: true,
+        message: 'If an account exists for this email, you will receive a reset link shortly.'
+      });
+      return;
+    }
+
+    // 3. Generate Reset Link via Firebase Admin
+    console.log('🔗 Generating password reset link...');
     const resetLink = await admin.auth().generatePasswordResetLink(email, {
       // Optional: Redirect back to login after reset
       url: `${process.env.APP_URL || 'http://localhost:3000'}/admin/login`
     });
+    console.log('✅ Reset link generated successfully');
 
-    // 3. Send email via our EmailService
+    // 4. Send email via our EmailService
+    console.log('📧 Attempting to send password reset email...');
     const sent = await emailService.sendPasswordResetEmail(email, resetLink);
 
     if (sent) {
+      console.log(`✅ Password reset email sent successfully to: ${email}`);
       (res as any).json({
         success: true,
         message: 'If an account exists for this email, you will receive a reset link shortly.'
       });
     } else {
+      console.error('❌ Email service returned false - email not sent');
       throw new Error('Failed to send email');
     }
   } catch (error: any) {
-    console.error('Forgot password error:', error);
+    console.error('❌ Forgot password error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
     // Safety: Always return success message to avoid email enumeration
     (res as any).json({
       success: true,
