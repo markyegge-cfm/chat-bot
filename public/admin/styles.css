@@ -1586,3 +1586,41 @@ textarea.form-control {
     font-size: 12px !important;
   }
 }
+
+/* ============================================
+   WIDGET SETTINGS ANIMATIONS
+   ============================================ */
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Widget Settings Hover Effects */
+.widget-settings-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.widget-settings-card:hover {
+  transform: translateY(-2px);
+}

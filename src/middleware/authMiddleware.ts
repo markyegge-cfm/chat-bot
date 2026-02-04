@@ -19,6 +19,7 @@ export const authenticateAdmin = async (
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('❌ No auth header or invalid format');
       return res.status(401).json({ 
         success: false, 
         error: 'Unauthorized: No token provided' 
@@ -26,6 +27,16 @@ export const authenticateAdmin = async (
     }
 
     const token = authHeader.split('Bearer ')[1];
+    
+    if (!token || token.trim() === '') {
+      console.log('❌ Empty token after splitting');
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Unauthorized: Invalid token format' 
+      });
+    }
+    
+    console.log('🔑 Token received (first 20 chars):', token.substring(0, 20) + '...');
     
     // Verify using our FirebaseService
     const user = await firebaseService.verifyAdminToken(token);

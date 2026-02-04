@@ -10,6 +10,7 @@ import conversationRoutes from './routes/conversationRoutes';
 import escalationRoutes from './routes/escalationRoutes';
 import knowledgeRoutes from './routes/knowledgeRoutes';
 import statsRoutes from './routes/statsRoutes';
+import widgetSettingsRoutes from './routes/widgetSettingsRoutes';
 import vertexAIRag from './services/vertexAIRagService';
 
 const app = express();
@@ -47,6 +48,7 @@ app.use(knowledgeRoutes);
 app.use('/api', conversationRoutes);
 app.use('/api', escalationRoutes);
 app.use(statsRoutes);
+app.use(widgetSettingsRoutes);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({

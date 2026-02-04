@@ -101,6 +101,65 @@ class Dashboard {
         <!-- Charts -->
       
 
+        <!-- Widget Settings Section -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow mb-8">
+          <div class="flex items-center justify-between p-6 border-b border-slate-100">
+            <div>
+              <h2 class="text-xl font-bold text-slate-800">Widget Settings</h2>
+              <p class="text-sm text-slate-500 mt-1">Configure chatbot greeting and suggestion questions</p>
+            </div>
+            <button
+              onclick="Dashboard.saveWidgetSettings()"
+              id="save-widget-btn"
+              class="px-6 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 
+                     transition-colors font-medium flex items-center gap-2">
+              <i class="fas fa-save"></i>
+              <span>Save Changes</span>
+            </button>
+          </div>
+
+          <div class="p-6 space-y-6">
+            <!-- Greeting Message -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">
+                <i class="fas fa-comment-dots text-amber-600 mr-2"></i>
+                Greeting Message
+              </label>
+              <input
+                type="text"
+                id="greeting-message"
+                class="w-full px-4 py-3 border border-slate-300 rounded-lg 
+                       focus:ring-2 focus:ring-amber-500 focus:border-amber-500 
+                       transition-all text-slate-800 placeholder-slate-400"
+                placeholder="Hi! How can I support you today?"
+                maxlength="200"
+              />
+              <p class="text-xs text-slate-500 mt-2">First message shown when visitors open the chatbot</p>
+            </div>
+
+            <!-- Suggestion Questions -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">
+                <i class="fas fa-lightbulb text-amber-600 mr-2"></i>
+                Suggestion Questions <span class="text-slate-400 font-normal">(Max 5)</span>
+              </label>
+              
+              <div id="suggestions-container" class="space-y-3 mb-3">
+                <!-- Suggestion inputs will be rendered here -->
+              </div>
+              
+              <button
+                onclick="Dashboard.addSuggestionInput()"
+                id="add-suggestion-btn"
+                class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-700 
+                       rounded-lg hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700
+                       transition-all font-medium flex items-center justify-center gap-2">
+                <i class="fas fa-plus-circle"></i>
+                <span>Add Suggestion</span>
+              </button>
+            </div>
+          </div>
+        </div>
          
           </div>
         </div>
@@ -110,6 +169,7 @@ class Dashboard {
 
   static async afterRender() {
     await this.loadStats();
+    await this.loadWidgetSettings();
   }
 
   static async loadStats() {
@@ -207,5 +267,207 @@ class Dashboard {
     if (typeof section === 'string' && section.length > 0) {
       window.location.hash = section;
     }
+  }
+
+  static async loadWidgetSettings() {
+    try {
+      const res = await fetch('/api/widget-settings');
+      const { success, data } = await res.json();
+      
+      if (success && data) {
+        // Set greeting message
+        const greetingInput = document.getElementById('greeting-message');
+        if (greetingInput) {
+          greetingInput.value = data.greetingMessage || '';
+        }
+
+        // Set suggestions
+        this.currentSuggestions = data.suggestions || [];
+        this.renderSuggestions();
+      }
+    } catch (error) {
+      console.error('Error loading widget settings:', error);
+    }
+  }
+
+  static renderSuggestions() {
+    const container = document.getElementById('suggestions-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+    this.currentSuggestions.forEach((suggestion, index) => {
+      const div = document.createElement('div');
+      div.className = 'flex items-center gap-3';
+      div.innerHTML = `
+        <span class="flex items-center justify-center min-w-[32px] h-8 rounded-lg 
+                     bg-amber-50 text-amber-700 font-semibold text-sm">
+          ${index + 1}
+        </span>
+        <input
+          type="text"
+          class="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg 
+                 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 
+                 transition-all text-slate-800 placeholder-slate-400"
+          placeholder="Enter suggestion question"
+          value="${suggestion}"
+          maxlength="100"
+          onchange="Dashboard.updateSuggestion(${index}, this.value)"
+        />
+        <button
+          onclick="Dashboard.removeSuggestion(${index})"
+          class="flex items-center justify-center w-9 h-9 rounded-lg 
+                 text-slate-400 hover:text-red-600 hover:bg-red-50 
+                 transition-all"
+          title="Remove">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      `;
+      container.appendChild(div);
+    });
+
+    // Update add button state
+    const addBtn = document.getElementById('add-suggestion-btn');
+    if (addBtn) {
+      addBtn.disabled = this.currentSuggestions.length >= 5;
+      if (this.currentSuggestions.length >= 5) {
+        addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        addBtn.querySelector('span').textContent = 'Maximum Reached';
+      } else {
+        addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        addBtn.querySelector('span').textContent = 'Add Suggestion';
+      }
+    }
+  }
+
+  static addSuggestionInput() {
+    if (!this.currentSuggestions) this.currentSuggestions = [];
+    if (this.currentSuggestions.length >= 5) {
+      alert('Maximum 5 suggestions allowed');
+      return;
+    }
+    this.currentSuggestions.push('');
+    this.renderSuggestions();
+  }
+
+  static updateSuggestion(index, value) {
+    if (!this.currentSuggestions) this.currentSuggestions = [];
+    this.currentSuggestions[index] = value;
+  }
+
+  static removeSuggestion(index) {
+    if (!this.currentSuggestions) this.currentSuggestions = [];
+    this.currentSuggestions.splice(index, 1);
+    this.renderSuggestions();
+  }
+
+  static async saveWidgetSettings() {
+    try {
+      const greetingInput = document.getElementById('greeting-message');
+      const greetingMessage = greetingInput?.value?.trim();
+
+      if (!greetingMessage) {
+        this.showNotification('Please enter a greeting message', 'error');
+        return;
+      }
+
+      // Filter out empty suggestions
+      const suggestions = (this.currentSuggestions || [])
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+      if (suggestions.length === 0) {
+        this.showNotification('Please add at least one suggestion question', 'error');
+        return;
+      }
+
+      const saveBtn = document.getElementById('save-widget-btn');
+      const originalContent = saveBtn?.innerHTML;
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Saving Changes...</span>';
+      }
+
+      const token = sessionStorage.getItem('authToken');
+      
+      if (!token) {
+        this.showNotification('Please login again - session expired', 'error');
+        setTimeout(() => {
+          window.location.href = '/admin/login';
+        }, 2000);
+        return;
+      }
+      
+      const res = await fetch('/api/widget-settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          greetingMessage,
+          suggestions
+        })
+      });
+
+      const { success, message, error } = await res.json();
+
+      if (success) {
+        this.showNotification(message || 'Widget settings saved successfully!', 'success');
+        await this.loadWidgetSettings();
+      } else {
+        // Check if it's an auth error
+        if (res.status === 401 || res.status === 403) {
+          this.showNotification('Session expired - please login again', 'error');
+          setTimeout(() => {
+            window.location.href = '/admin/login';
+          }, 2000);
+          return;
+        }
+        throw new Error(error || 'Failed to save settings');
+      }
+    } catch (error) {
+      console.error('Error saving widget settings:', error);
+      this.showNotification('Failed to save widget settings: ' + error.message, 'error');
+    } finally {
+      const saveBtn = document.getElementById('save-widget-btn');
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-save"></i><span>Save Changes</span>';
+      }
+    }
+  }
+
+  static showNotification(message, type = 'info') {
+    // Remove existing notification
+    const existing = document.getElementById('widget-notification');
+    if (existing) existing.remove();
+
+    const notification = document.createElement('div');
+    notification.id = 'widget-notification';
+    
+    const colors = {
+      success: 'bg-emerald-500',
+      error: 'bg-red-500',
+      info: 'bg-amber-500'
+    };
+
+    const icons = {
+      success: 'fa-check-circle',
+      error: 'fa-exclamation-circle',
+      info: 'fa-info-circle'
+    };
+
+    notification.className = `fixed top-24 right-8 ${colors[type]} text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-slideIn`;
+    notification.innerHTML = `
+      <i class="fas ${icons[type]} text-xl"></i>
+      <span class="font-medium">${message}</span>
+    `;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.style.animation = 'slideOut 0.3s ease-out';
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
   }
 }

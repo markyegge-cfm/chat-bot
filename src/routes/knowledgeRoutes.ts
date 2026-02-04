@@ -5,15 +5,16 @@
 
 import { Router } from 'express';
 import {
-  batchDeleteKnowledge,
-  createKnowledge,
-  deleteKnowledge,
-  getAllKnowledge,
-  getKnowledgeById,
-  getKnowledgeStats,
-  updateKnowledge,
-  uploadCSV,
-  uploadDocx
+    batchDeleteKnowledge,
+    createKnowledge,
+    deleteKnowledge,
+    getAllKnowledge,
+    getKnowledgeById,
+    getKnowledgeStats,
+    updateDocx,
+    updateKnowledge,
+    uploadCSV,
+    uploadDocx
 } from '../controllers/knowledgeController';
 
 const router = Router();
@@ -45,6 +46,9 @@ router.post('/api/knowledge/upload/csv', uploadCSV);
 // Upload Docx (replaces PDF)
 router.post('/api/knowledge/upload/docx', uploadDocx);
 router.post('/api/knowledge/upload/pdf', uploadDocx); // Keep legacy route for frontend compatibility for now
+
+// Update existing DOCX with new version
+router.put('/api/knowledge/:id/docx', updateDocx);
 
 // Debug: Check RAG status
 router.get('/api/knowledge/debug/rag-status', async (req: any, res: any) => {

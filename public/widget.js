@@ -5,6 +5,37 @@
     widgetId: 'ai-chatbot-widget',
   };
 
+  async function loadWidgetSettings() {
+    try {
+      const response = await fetch('/api/widget-settings');
+      const { success, data } = await response.json();
+      
+      if (success && data) {
+        // Update greeting message
+        const greetingText = document.getElementById('greeting-text');
+        if (greetingText) {
+          greetingText.textContent = data.greetingMessage;
+        }
+
+        // Update suggestion chips
+        const suggestionsContainer = document.getElementById('initial-suggestions');
+        if (suggestionsContainer && data.suggestions && data.suggestions.length > 0) {
+          suggestionsContainer.innerHTML = '';
+          data.suggestions.forEach((suggestion, index) => {
+            const chip = document.createElement('button');
+            chip.className = 'suggestion-chip';
+            chip.textContent = `${index + 1}. ${suggestion}`;
+            chip.onclick = () => window.sendSuggestion(suggestion);
+            suggestionsContainer.appendChild(chip);
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load widget settings:', error);
+      // Keep default values if loading fails
+    }
+  }
+
   function initChatbot() {
     if (document.getElementById(CONFIG.widgetId)) return;
 
@@ -14,6 +45,7 @@
     document.body.appendChild(widgetContainer);
 
     injectStyles();
+    loadWidgetSettings();
     attachEventListeners();
 
     // Expose sendSuggestion globally
@@ -48,13 +80,11 @@
           <div class="chat-intro-text">Welcome to our website! Ask us anything.</div>
           <div class="chatbot-message bot-message" id="initial-greeting">
             <div class="message-content">
-              <p>Hi! How can I support you today?</p>
+              <p id="greeting-text">Hi! How can I support you today?</p>
             </div>
           </div>
           <div class="suggestion-chips" id="initial-suggestions">
-            <button class="suggestion-chip" onclick="window.sendSuggestion('Learn About Our Courses')">1. Learn About Our Courses</button>
-            <button class="suggestion-chip" onclick="window.sendSuggestion('Help Me Choose a Program')">2. Help Me Choose a Program</button>
-            <button class="suggestion-chip" onclick="window.sendSuggestion('Watch Free Training')">3. Watch Free Training</button>
+            <!-- Suggestions will be loaded dynamically -->
           </div>
         </div>
 
