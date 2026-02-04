@@ -12,6 +12,7 @@ interface KnowledgeMetadata {
   id: string;
   ragFileId: string;
   ragFileIds?: string[]; // All versions of this knowledge item
+  gcsUris?: string[]; // GCS URIs for all RAG files (for deletion)
   question: string;
   answer: string;
   type: 'manual' | 'csv' | 'pdf' | 'docx';

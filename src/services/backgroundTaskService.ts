@@ -105,6 +105,7 @@ class BackgroundTaskService {
 
     try {
       const ragFileIds: string[] = [];
+      const gcsUris: string[] = [];
 
       for (const filePath of paths) {
         // Upload to RAG
@@ -114,12 +115,16 @@ class BackgroundTaskService {
           description
         );
         ragFileIds.push(ragFile.name);
+        if (ragFile.gcsUri) {
+          gcsUris.push(ragFile.gcsUri);
+        }
       }
 
-      // Update Firebase with RAG file IDs
+      // Update Firebase with RAG file IDs and GCS URIs
       await firebaseService.updateKnowledge(task.knowledgeId, {
         ragFileId: ragFileIds[0] || '', // Still keep primary ID for backward compatibility
         ragFileIds: ragFileIds,
+        gcsUris: gcsUris, // Store GCS URIs for later deletion
         status: 'COMPLETED',
       });
 
@@ -142,15 +147,62 @@ class BackgroundTaskService {
    * Handle RAG deletion in background
    */
   private async handleDeleteRag(task: BackgroundTask): Promise<void> {
-    const { ragFileId, ragFileIds } = task.data;
-    const idsToDelete = ragFileIds || (ragFileId ? [ragFileId] : []);
+    const { ragFileId, ragFileIds, gcsUris, knowledgeType, knowledgeId } = task.data;
+    
+    let idsToDelete = ragFileIds || (ragFileId ? [ragFileId] : []);
+    let urisToDelete = gcsUris || [];
 
-    for (const id of idsToDelete) {
-      if (id) {
-        await vertexAIRag.deleteFile(id);
-        console.log(`✅ RAG Delete completed for file: ${id}`);
+    // For DOCX files, search by GCS pattern if we don't have stored URIs
+    if (knowledgeType === 'docx' && knowledgeId && urisToDelete.length === 0) {
+      console.log(`🔍 Searching for DOCX files with GCS pattern: full_${knowledgeId}`);
+      try {
+        const foundFiles = await vertexAIRag.findFilesByGcsPattern(`full_${knowledgeId}`);
+        console.log(`  Found ${foundFiles.length} file(s) matching GCS pattern`);
+        
+        // Add any newly found files that aren't already in our list
+        for (const fileResourceName of foundFiles) {
+          if (!idsToDelete.includes(fileResourceName)) {
+            idsToDelete.push(fileResourceName);
+            console.log(`  + Added file to deletion list: ${fileResourceName.split('/').pop()}`);
+          }
+        }
+      } catch (error: any) {
+        console.warn(`  ⚠️  Could not search for DOCX files: ${error.message}`);
       }
     }
+
+    console.log(`🗑️  Deleting ${idsToDelete.length} RAG file(s) and ${urisToDelete.length} GCS file(s) for ${knowledgeType || 'knowledge'} ${task.knowledgeId}`);
+
+    let deletedCount = 0;
+    let failedCount = 0;
+
+    // Delete RAG file references
+    for (const id of idsToDelete) {
+      if (id) {
+        try {
+          await vertexAIRag.deleteFile(id);
+          deletedCount++;
+          console.log(`  ✅ Deleted RAG file: ${id.split('/').pop()}`);
+        } catch (error: any) {
+          failedCount++;
+          console.warn(`  ⚠️  Failed to delete ${id.split('/').pop()}: ${error.message}`);
+        }
+      }
+    }
+
+    // Delete GCS files directly using stored URIs
+    for (const gcsUri of urisToDelete) {
+      if (gcsUri) {
+        try {
+          await vertexAIRag.deleteGcsFile(gcsUri);
+          console.log(`  ✅ Deleted GCS file: ${gcsUri.split('/').pop()}`);
+        } catch (error: any) {
+          console.warn(`  ⚠️  Failed to delete GCS file: ${error.message}`);
+        }
+      }
+    }
+
+    console.log(`✅ RAG deletion complete: ${deletedCount} deleted, ${failedCount} failed`);
   }
 
   /**

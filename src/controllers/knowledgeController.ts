@@ -222,6 +222,9 @@ export const deleteKnowledge = async (req: Request, res: Response): Promise<void
     if (ragFileIdsToDelete.length > 0) {
       backgroundTaskService.queueTask('DELETE_RAG', id, {
         ragFileIds: ragFileIdsToDelete,
+        gcsUris: knowledge.gcsUris || [], // Pass stored GCS URIs for direct deletion
+        knowledgeType: knowledge.type, // Pass type for special handling
+        knowledgeId: id, // For finding DOCX files by "full_{id}" pattern
       });
     }
 
@@ -525,6 +528,9 @@ export const updateDocx = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
+// FIXED batchDeleteKnowledge function
+// Replace in src/controllers/knowledgeController.ts
+
 export const batchDeleteKnowledge = async (req: Request, res: Response): Promise<void> => {
   try {
     const { ids } = req.body;
@@ -539,26 +545,43 @@ export const batchDeleteKnowledge = async (req: Request, res: Response): Promise
       try {
         const knowledge = await firebaseService.getKnowledgeById(id);
         if (knowledge) {
+          // Delete from Firebase first
           await firebaseService.deleteKnowledge(id);
+          
+          // Delete file from storage if it's a file-based type
           if (knowledge.type === 'pdf' || knowledge.type === 'docx') {
-            try { await firebaseService.deletePdfFile(id); } catch (e) { }
+            try { 
+              await firebaseService.deletePdfFile(id); 
+            } catch (e) { 
+              console.warn(`⚠️  Could not delete storage file for ${id}:`, e);
+            }
           }
           
-          // Delete ALL RAG file versions
+          // Collect ALL RAG file IDs (including versions)
           const ragFileIdsToDelete = knowledge.ragFileIds || [];
           if (knowledge.ragFileId && !ragFileIdsToDelete.includes(knowledge.ragFileId)) {
             ragFileIdsToDelete.push(knowledge.ragFileId);
           }
           
+          // Only queue deletion if there are actual RAG files to delete
           if (ragFileIdsToDelete.length > 0) {
-            backgroundTaskService.queueTask('DELETE_RAG', id, { ragFileIds: ragFileIdsToDelete });
+            backgroundTaskService.queueTask('DELETE_RAG', id, { 
+              ragFileIds: ragFileIdsToDelete,
+              gcsUris: knowledge.gcsUris || [], // IMPORTANT: Pass GCS URIs for deletion
+              knowledgeType: knowledge.type,
+              knowledgeId: id
+            });
+          } else {
+            console.warn(`⚠️  No RAG file IDs found for knowledge ${id} (${knowledge.type})`);
           }
           
           results.successful++;
         } else {
+          console.warn(`⚠️  Knowledge ${id} not found in Firebase`);
           results.failed++;
         }
       } catch (err: any) {
+        console.error(`❌ Error deleting knowledge ${id}:`, err.message);
         results.failed++;
       }
     }
@@ -568,10 +591,11 @@ export const batchDeleteKnowledge = async (req: Request, res: Response): Promise
 
     (res as any).json({
       success: true,
-      message: `Deleted ${results.successful} items`,
+      message: `Deleted ${results.successful} items (${results.failed} failed)`,
       data: results
     });
   } catch (error: any) {
+    console.error('❌ Batch delete error:', error);
     (res as any).status(500).json({ success: false, error: error.message });
   }
 };

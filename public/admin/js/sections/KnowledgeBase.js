@@ -1085,7 +1085,8 @@ class KnowledgeBase {
             setTimeout(() => {
                closeModal();
                this.showToast(result.data?.successful ? `Imported ${result.data.successful} items successfully` : 'Knowledge items uploaded successfully', 'success');
-               this.loadDocuments();
+               // Reload after a longer delay to ensure Firestore has written the data
+               setTimeout(() => this.loadDocuments(), 1000);
             }, 500);
 
          } catch (error) {
@@ -1141,7 +1142,8 @@ class KnowledgeBase {
                   setTimeout(() => {
                      closeModal();
                      this.showToast('Document uploaded successfully and queued for processing', 'success');
-                     this.loadDocuments();
+                     // Reload after a longer delay to ensure Firestore has written the data
+                     setTimeout(() => this.loadDocuments(), 1000);
                   }, 500);
 
                } catch (error) {
@@ -1191,7 +1193,8 @@ class KnowledgeBase {
             if (result.success) {
                closeModal();
                this.showToast('Knowledge item added successfully', 'success');
-               await this.loadDocuments();
+               // Reload after a longer delay to ensure Firestore has written the data
+               setTimeout(() => this.loadDocuments(), 1000);
             } else {
                throw new Error(result.error || 'Failed to save');
             }

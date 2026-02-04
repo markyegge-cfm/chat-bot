@@ -27,6 +27,7 @@ interface RagFile {
   createdAt: string;
   updatedAt: string;
   status: 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  gcsUri?: string; // GCS URI for deletion
 }
 
 interface RagCorpusConfig {
@@ -155,6 +156,8 @@ class VertexAIRagService {
    * Upload a file using GCS Import API.
    * Steps: 1) Upload to GCS, 2) Call ImportFiles API, 3) Poll for completion.
    * GCS files are preserved after import because Vertex AI RAG references the source URI.
+   * 
+   * FIX: Now passes gcsUri to waitForImportOperation for correct file identification
    */
   async uploadFile(filePath: string, displayName?: string, description?: string): Promise<RagFile> {
     if (!this.initialized || !this.client) {
@@ -200,7 +203,15 @@ class VertexAIRagService {
 
       console.log(`✅ Import operation started: ${importResponse.data.name}`);
 
-      const ragFile = await this.waitForImportOperation(importResponse.data.name, displayName || path.basename(filePath));
+      // FIX: Pass gcsUri to waitForImportOperation so it can find the correct file
+      const ragFile = await this.waitForImportOperation(
+        importResponse.data.name, 
+        displayName || path.basename(filePath),
+        gcsUri  // ← CRITICAL: Pass GCS URI for file identification
+      );
+
+      // Add the GCS URI to the ragFile object so we can delete it later
+      ragFile.gcsUri = gcsUri;
 
       console.log(`💾 GCS file preserved at: ${gcsPath}`);
 
@@ -220,7 +231,20 @@ class VertexAIRagService {
     }
   }
 
-  private async waitForImportOperation(operationName: string, displayName: string, maxWaitMs: number = RAG_CONFIG.IMPORT_TIMEOUT_MS): Promise<RagFile> {
+  /**
+   * Wait for import operation to complete and retrieve the file details.
+   * 
+   * FIX: Now accepts gcsUri parameter and searches for file by exact GCS URI match
+   * instead of assuming the first file in the corpus is the correct one.
+   * This prevents grabbing wrong files (like old CSV files) when the API doesn't
+   * return ragFiles in the operation response.
+   */
+  private async waitForImportOperation(
+    operationName: string, 
+    displayName: string, 
+    gcsUri: string,  // ← FIX: Added parameter
+    maxWaitMs: number = RAG_CONFIG.IMPORT_TIMEOUT_MS
+  ): Promise<RagFile> {
     if (!this.client) throw new Error('Not initialized');
 
     const startTime = Date.now();
@@ -251,34 +275,106 @@ class VertexAIRagService {
           console.log(`📊 Found ${ragFiles.length} RAG files in response`);
 
           if (ragFiles.length === 0) {
-            console.warn('⚠️  No ragFiles found in response. Full response:', JSON.stringify(importResult, null, 2));
+            console.warn('⚠️  No ragFiles found in response. Searching corpus for newly imported file...');
 
-            console.log('🔍 Querying corpus to find imported file...');
+            // STRATEGY: Poll the corpus multiple times to catch the newly imported file
+            // Vertex AI may take a few seconds to make the file visible in listFiles()
+            const maxPolls = 6; // Try for up to 30 seconds
+            const pollDelay = 5000; // 5 seconds between polls
+            
+            for (let poll = 1; poll <= maxPolls; poll++) {
+              try {
+                if (poll > 1) {
+                  console.log(`⏳ Waiting ${pollDelay/1000}s before poll attempt ${poll}/${maxPolls}...`);
+                  await new Promise(resolve => setTimeout(resolve, pollDelay));
+                }
+                
+                const allFiles = await this.listFiles();
+                console.log(`🔍 Poll ${poll}/${maxPolls}: Searching ${allFiles.length} files for recently imported file`);
+                
+                // STRATEGY 1: Try exact GCS URI match (in case Vertex AI doesn't rename)
+                let matchingFile = allFiles.find(file => {
+                  const fileGcsUris = file.gcsSource?.uris || [];
+                  return fileGcsUris.some((uri: string) => uri === gcsUri);
+                });
 
-            try {
-              const allFiles = await this.listFiles();
+                // STRATEGY 2: Try partial match on the unique filename (Vertex AI renames paths)
+                if (!matchingFile) {
+                  const filename = path.basename(gcsUri);
+                  console.log(`   Trying filename match: ${filename}`);
+                  matchingFile = allFiles.find(file => {
+                    const fileGcsUris = file.gcsSource?.uris || [];
+                    return fileGcsUris.some((uri: string) => uri.includes(filename));
+                  });
+                }
 
-              if (allFiles.length > 0) {
-                const mostRecentFile = allFiles[0];
-                const fileId = mostRecentFile.name.split('/').pop() || uuidv4();
+                // STRATEGY 3: Find the most recently created file (if createTime exists)
+                if (!matchingFile && poll >= 2) {
+                  console.log(`   Trying most recent file by timestamp...`);
+                  const filesWithTime = allFiles.filter(f => f.createTime);
+                  if (filesWithTime.length > 0) {
+                    filesWithTime.sort((a, b) => {
+                      return new Date(b.createTime).getTime() - new Date(a.createTime).getTime();
+                    });
+                    const newestFile = filesWithTime[0];
+                    const fileAge = Date.now() - new Date(newestFile.createTime).getTime();
+                    // Only use if file was created in the last 2 minutes
+                    if (fileAge < 120000) {
+                      matchingFile = newestFile;
+                      console.log(`   Found recent file (age: ${Math.round(fileAge/1000)}s)`);
+                    }
+                  }
+                }
 
-                console.log(`✅ Found imported file in corpus: ${mostRecentFile.name}`);
+                if (matchingFile) {
+                  const fileId = matchingFile.name.split('/').pop() || uuidv4();
+                  const actualGcsUri = matchingFile.gcsSource?.uris?.[0] || gcsUri;
+                  
+                  console.log(`✅ Found imported file in corpus:`);
+                  console.log(`   Resource Name: ${matchingFile.name}`);
+                  console.log(`   File ID: ${fileId}`);
+                  console.log(`   Display Name: ${matchingFile.displayName || displayName}`);
+                  console.log(`   Actual GCS URI: ${actualGcsUri}`);
+                  console.log(`   Expected GCS URI: ${gcsUri}`);
+                  console.log(`   Match: ${actualGcsUri === gcsUri ? 'EXACT' : 'PARTIAL'}`);
 
-                return {
-                  id: fileId,
-                  name: mostRecentFile.name,
-                  displayName: mostRecentFile.displayName || displayName,
-                  description: mostRecentFile.description || '',
-                  type: this.getFileType(displayName),
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                  status: 'COMPLETED',
-                };
+                  return {
+                    id: fileId,
+                    name: matchingFile.name,
+                    displayName: matchingFile.displayName || displayName,
+                    description: matchingFile.description || '',
+                    type: this.getFileType(displayName),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    status: 'COMPLETED',
+                    gcsUri: actualGcsUri, // Store the actual GCS URI
+                  };
+                }
+                
+                // If we're on the last poll attempt, show debug info
+                if (poll === maxPolls) {
+                  console.warn(`❌ Failed to find file after ${maxPolls} polls`);
+                  console.warn(`   Expected filename: ${path.basename(gcsUri)}`);
+                  console.warn(`   Total files in corpus: ${allFiles.length}`);
+                  if (allFiles.length > 0) {
+                    console.warn(`   Sample recent files:`);
+                    allFiles.slice(0, 5).forEach(f => {
+                      const uris = f.gcsSource?.uris || [];
+                      const createTime = f.createTime || 'unknown';
+                      console.warn(`     - ${path.basename(uris[0] || 'no-uri')} (created: ${createTime})`);
+                    });
+                  }
+                }
+              } catch (listError) {
+                console.error(`❌ Failed to query corpus on poll ${poll}:`, listError);
               }
-            } catch (listError) {
-              console.error('❌ Failed to query corpus:', listError);
             }
 
+            // All polling attempts failed - create placeholder
+            console.error(`❌ CRITICAL: Could not find imported file in corpus after ${maxPolls} polling attempts`);
+            console.error(`   This file will NOT be deletable from the RAG corpus`);
+            console.error(`   Manual cleanup required in Vertex AI console`);
+            
             const placeholderId = uuidv4();
             const fullResourceName = `projects/${this.config.projectId}/locations/${this.config.location}/ragCorpora/${this.config.corpusId}/ragFiles/${placeholderId}`;
 
@@ -286,7 +382,7 @@ class VertexAIRagService {
               id: placeholderId,
               name: fullResourceName,
               displayName: displayName,
-              description: 'Import completed successfully',
+              description: 'Import completed but file not found in corpus',
               type: this.getFileType(displayName),
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
@@ -294,6 +390,7 @@ class VertexAIRagService {
             };
           }
 
+          // Normal case: ragFiles returned in response
           const ragFile = ragFiles[0]; // First (and usually only) file
           const fileId = ragFile.name.split('/').pop() || uuidv4();
 
@@ -325,6 +422,51 @@ class VertexAIRagService {
     }
 
     throw new Error(`Import operation timed out after ${maxWaitMs / 1000} seconds`);
+  }
+
+  /**
+   * Wait for a delete operation to complete
+   */
+  private async waitForDeleteOperation(operationName: string, maxWaitMs: number = RAG_CONFIG.IMPORT_TIMEOUT_MS): Promise<void> {
+    if (!this.client) throw new Error('Not initialized');
+
+    const startTime = Date.now();
+    let attempt = 0;
+
+    while (Date.now() - startTime < maxWaitMs) {
+      attempt++;
+
+      try {
+        const operationUrl = `https://${this.config.location}-aiplatform.googleapis.com/v1beta1/${operationName}`;
+        const response = await this.client.get(operationUrl);
+        const operation = response.data;
+
+        console.log(`⏳ Delete operation status (attempt ${attempt}): ${operation.done ? 'DONE' : 'IN_PROGRESS'}`);
+
+        if (operation.done) {
+          if (operation.error) {
+            console.error('❌ Delete operation failed:', JSON.stringify(operation.error, null, 2));
+            throw new Error(`Delete failed: ${operation.error.message}`);
+          }
+
+          console.log('✅ Delete operation completed successfully');
+          return;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, RAG_CONFIG.POLL_INTERVAL_MS));
+
+      } catch (error: any) {
+        if (error.response?.status === 404) {
+          // Operation might have completed and been cleaned up
+          console.log('✅ Delete operation completed (operation not found)');
+          return;
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    throw new Error(`Delete operation timed out after ${maxWaitMs / 1000} seconds`);
   }
 
   async retrieveContextsWithRAG(query: string, topK = RAG_CONFIG.RAG_TOP_K): Promise<string> {
@@ -445,6 +587,11 @@ Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
 
   /**
    * Delete file - handles both full resource names and simple IDs
+   * 
+   * FIX: Now uses authenticated client and verifies deletion succeeded
+   * 
+   * Note: Only deletes the RAG corpus reference, not the GCS file.
+   * GCS files should be deleted separately using deleteGcsFile() with stored URIs.
    */
   async deleteFile(fileIdOrResourceName: string): Promise<boolean> {
     if (!this.client) return false;
@@ -461,43 +608,196 @@ Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
       resourceName = `projects/${this.config.projectId}/locations/${this.config.location}/ragCorpora/${this.config.corpusId}/ragFiles/${fileIdOrResourceName}`;
     }
 
+    console.log(`🗑️  Attempting to delete RAG file:`);
+    console.log(`   Resource: ${resourceName}`);
+    
+    // FIX: Verify the file exists before attempting deletion
+    try {
+      const getUrl = `https://${this.config.location}-aiplatform.googleapis.com/v1beta1/${resourceName}`;
+      const getResponse = await this.client.get(getUrl);
+      console.log(`✅ File exists in corpus:`, {
+        displayName: getResponse.data.displayName,
+        state: getResponse.data.fileStatus?.state || getResponse.data.ragFileConfig?.state
+      });
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        console.warn(`⚠️  File not found in RAG corpus (may have been already deleted): ${resourceName}`);
+        return true;
+      }
+      console.error(`❌ Error verifying file existence:`, error.response?.data || error.message);
+      // Continue with deletion attempt anyway
+    }
+
     const deleteUrl = `https://${this.config.location}-aiplatform.googleapis.com/v1beta1/${resourceName}`;
-    console.log(`🗑️  Deleting RAG file: ${resourceName}`);
 
     try {
-      const response = await axios.delete(deleteUrl, {
-        headers: {
-          Authorization: this.client.defaults.headers['Authorization'],
-          'Content-Type': 'application/json',
-        },
-      });
+      // FIX: Use authenticated client (not raw axios)
+      const response = await this.client.delete(deleteUrl);
 
-      console.log(`✅ RAG Delete: ${response.status} ${response.statusText}`);
-      return true;
+      console.log(`✅ RAG Delete API Response:`, {
+        status: response.status,
+        statusText: response.statusText,
+        hasOperation: !!(response.data && response.data.name),
+        operationName: response.data?.name,
+        responseData: JSON.stringify(response.data, null, 2)
+      });
+      
+      // Check if this returns an operation that needs to be polled
+      if (response.data && response.data.name && response.data.name.includes('/operations/')) {
+        console.log(`⏳ Delete operation started: ${response.data.name}`);
+        await this.waitForDeleteOperation(response.data.name);
+        console.log(`✅ Delete operation completed`);
+        
+        // FIX: Verify the file was actually deleted
+        try {
+          await this.client.get(`https://${this.config.location}-aiplatform.googleapis.com/v1beta1/${resourceName}`);
+          console.error(`❌ WARNING: File still exists after delete operation completed!`);
+          return false;
+        } catch (verifyError: any) {
+          if (verifyError.response?.status === 404) {
+            console.log(`✅ Verified: File successfully deleted from corpus`);
+            return true;
+          }
+          throw verifyError;
+        }
+      } else {
+        console.log(`✅ RAG file deleted immediately (no operation returned)`);
+        return true;
+      }
+      
     } catch (error: any) {
-      // If file doesn't exist (404/400), don't fail - just log and continue
-      // This happens with placeholder files that were never actually created
       if (error.response?.status === 404 || error.response?.status === 400) {
         console.warn(`⚠️  File not found in RAG corpus (may be placeholder): ${resourceName}`);
-        return true; // Return success - file is "deleted" (never existed)
+        return true;
       }
 
-      // For other errors, log and throw
       console.error(`❌ RAG Delete Error:`, {
         resourceName,
         status: error.response?.status,
+        statusText: error.response?.statusText,
         message: error.message,
+        errorData: JSON.stringify(error.response?.data, null, 2)
       });
       throw error;
     }
   }
 
+  /**
+   * Delete a GCS file directly using its URI
+   * @param gcsUri - Full GCS URI like gs://bucket/path/to/file.txt
+   */
+  async deleteGcsFile(gcsUri: string): Promise<void> {
+    if (!gcsUri || !gcsUri.startsWith('gs://')) {
+      throw new Error(`Invalid GCS URI: ${gcsUri}`);
+    }
+
+    await this.ensureStorageBucket();
+
+    // Extract the path from the URI (gs://bucket/path -> path)
+    const gcsPath = gcsUri.replace(`gs://${this.storageBucket.name}/`, '');
+    
+    console.log(`🗑️  Deleting GCS file: ${gcsPath}`);
+    await this.storageBucket.file(gcsPath).delete();
+  }
+
   async listFiles(): Promise<any[]> {
     if (!this.initialized || !this.client) throw new Error('Not initialized');
 
-    const url = `${this.config.endpoint}/projects/${this.config.projectId}/locations/${this.config.location}/ragCorpora/${this.config.corpusId}/ragFiles`;
-    const res = await this.client.get(url);
-    return res.data.ragFiles || [];
+    const baseUrl = `${this.config.endpoint}/projects/${this.config.projectId}/locations/${this.config.location}/ragCorpora/${this.config.corpusId}/ragFiles`;
+    
+    console.log(`📋 Listing files from corpus...`);
+    
+    let allFiles: any[] = [];
+    let pageToken: string | undefined = undefined;
+    let pageCount = 0;
+    
+    // Fetch all pages
+    do {
+      pageCount++;
+      const url: string = pageToken ? `${baseUrl}?pageToken=${pageToken}` : baseUrl;
+      
+      const res: any = await this.client.get(url);
+      const files = res.data.ragFiles || [];
+      allFiles = allFiles.concat(files);
+      
+      pageToken = res.data.nextPageToken;
+      
+      console.log(`   Page ${pageCount}: ${files.length} files (total so far: ${allFiles.length})`);
+      
+    } while (pageToken);
+    
+    console.log(`✅ Total files in corpus: ${allFiles.length}`);
+    
+    // Log first file structure for debugging
+    if (allFiles.length > 0 && pageCount === 1) {
+      console.log(`📄 Sample file structure:`, {
+        name: allFiles[0].name,
+        displayName: allFiles[0].displayName,
+        hasGcsSource: !!allFiles[0].gcsSource,
+        gcsUris: allFiles[0].gcsSource?.uris || [],
+        createTime: allFiles[0].createTime,
+        updateTime: allFiles[0].updateTime,
+        allKeys: Object.keys(allFiles[0])
+      });
+    }
+    
+    return allFiles;
+  }
+
+  /**
+   * Find all RAG files that match a display name pattern (for finding DOCX chunks)
+   */
+  async findFilesByDisplayName(displayNamePattern: string): Promise<string[]> {
+    try {
+      const allFiles = await this.listFiles();
+      const matchingFiles = allFiles
+        .filter(file => {
+          const displayName = file.displayName || '';
+          return displayName.includes(displayNamePattern);
+        })
+        .map(file => file.name);
+      
+      console.log(`🔍 Found ${matchingFiles.length} RAG files matching display name "${displayNamePattern}"`);
+      return matchingFiles;
+    } catch (error) {
+      console.error('Failed to search RAG files by display name:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Find all RAG files that match a GCS URI pattern (for finding DOCX files by their storage path)
+   * This searches the gcsSource.uris field which contains the actual GCS path like:
+   * gs://bucket/rag-content/1770152317418_full_VcYy2vZC5nyJPwk0awFR.txt
+   */
+  async findFilesByGcsPattern(gcsPattern: string): Promise<string[]> {
+    try {
+      const allFiles = await this.listFiles();
+      console.log(`🔍 Searching ${allFiles.length} files for GCS pattern: ${gcsPattern}`);
+      
+      const matchingFiles = allFiles
+        .filter(file => {
+          // Check the gcsSource.uris array (it's an array, not a single string)
+          const gcsUris = file.gcsSource?.uris || [];
+          const gcsUri = gcsUris.length > 0 ? gcsUris[0] : '';
+          const matches = gcsUri.includes(gcsPattern);
+          
+          if (matches) {
+            console.log(`  ✓ Match found!`);
+            console.log(`    File: ${file.name}`);
+            console.log(`    GCS URI: ${gcsUri}`);
+          }
+          
+          return matches;
+        })
+        .map(file => file.name);
+      
+      console.log(`🔍 Found ${matchingFiles.length} RAG file(s) matching GCS pattern "${gcsPattern}"`);
+      return matchingFiles;
+    } catch (error) {
+      console.error('Failed to search RAG files by GCS pattern:', error);
+      return [];
+    }
   }
 
   async getFile(fileId: string): Promise<any> {
