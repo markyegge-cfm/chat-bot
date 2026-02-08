@@ -15,7 +15,7 @@ const RAG_CONFIG = {
   GENERATION_TEMPERATURE: 0.7,
   GENERATION_TOP_P: 0.95,
   GENERATION_TOP_K: 40,
-  MAX_OUTPUT_TOKENS: 2048
+  MAX_OUTPUT_TOKENS: 8192  // Maximum for Gemini 2.5 Flash - ensures no response cutoff
 } as const;
 
 interface RagFile {
@@ -77,11 +77,7 @@ class VertexAIRagService {
     return token.token;
   }
 
-  /**
-   * Sets up the Google Auth client and resolves the Corpus ID.
-   * Must be called before any other operation.
-   * Storage bucket is initialized lazily on first upload to avoid Firebase dependency during init.
-   */
+
   async initialize(): Promise<void> {
     if (!this.config.projectId || (!this.config.corpusName && !process.env.RESOURCE_NAME)) {
       throw new Error('Missing PROJECT_ID or CORPUS_NAME');
@@ -101,9 +97,7 @@ class VertexAIRagService {
     console.log('✅ Vertex AI RAG Service initialized');
   }
 
-  /**
-   * Initialize storage bucket lazily (on first use) to avoid Firebase initialization order issues.
-   */
+
   private async ensureStorageBucket(): Promise<void> {
     if (!this.storageBucket) {
       const bucketName = process.env.STORAGE_BUCKET || `${this.config.projectId}.appspot.com`;
@@ -152,13 +146,7 @@ class VertexAIRagService {
     this.config.corpusId = corpus.name.split('/').pop();
   }
 
-  /**
-   * Upload a file using GCS Import API.
-   * Steps: 1) Upload to GCS, 2) Call ImportFiles API, 3) Poll for completion.
-   * GCS files are preserved after import because Vertex AI RAG references the source URI.
-   * 
-   * FIX: Now passes gcsUri to waitForImportOperation for correct file identification
-   */
+
   async uploadFile(filePath: string, displayName?: string, description?: string): Promise<RagFile> {
     if (!this.initialized || !this.client) {
       throw new Error('Not initialized');
@@ -231,14 +219,7 @@ class VertexAIRagService {
     }
   }
 
-  /**
-   * Wait for import operation to complete and retrieve the file details.
-   * 
-   * FIX: Now accepts gcsUri parameter and searches for file by exact GCS URI match
-   * instead of assuming the first file in the corpus is the correct one.
-   * This prevents grabbing wrong files (like old CSV files) when the API doesn't
-   * return ragFiles in the operation response.
-   */
+
   private async waitForImportOperation(
     operationName: string, 
     displayName: string, 
@@ -493,7 +474,7 @@ class VertexAIRagService {
 
         const systemPrompt = `You are a helpful and professional customer service AI assistant.
 
-**Greeting Handling**: Respond warmly to greetings. For "Hi", "Hello", etc., say "Hi there! 👋 How can I help you today?"
+**Greeting Handling**: ONLY respond with "Hi there! 👋 How can I help you today?" if the user's message is JUST a greeting like "Hi", "Hello", "Hey" with no other questions. If they ask a question (even if they start with "Hi"), skip the greeting and answer the question directly.
 
 **Knowledge Base Answers**: The knowledge base consists of Question and Answer pairs. 
 
@@ -516,11 +497,25 @@ class VertexAIRagService {
 
 **Email Collection**: If you cannot find the answer in the knowledge base, acknowledge the question professionally and politely ask for their email.
 Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
+DO NOT include follow-up questions when you use the fallback message.
 
 **Tone**: Professional, helpful, and thorough.
 
-**Follow-up Questions**: After providing the answer, suggest 2-3 short, relevant follow-up questions the user might ask next. Format them exactly like this at the end of your response:
-<<<FOLLOWUP: Question 1 | Question 2 | Question 3>>>`;
+**Formatting**: DO NOT add emojis to your responses. Keep the text professional and emoji-free.
+
+**CRITICAL - Follow-up Questions (MANDATORY)**:
+You MUST end your response with 2-3 relevant follow-up questions ONLY when you provide an answer from the knowledge base.
+DO NOT include follow-up questions if you're asking for their email or using the fallback message.
+Format EXACTLY as shown below (copy this format precisely):
+
+<<<FOLLOWUP: What is the cost of the Elite Course? | How do I enroll? | What are the requirements?>>>
+
+Examples:
+- For course questions: "What is the pricing? | What topics are covered? | How long is the course?"
+- For enrollment: "When does it start? | What are the payment options? | Is there a refund policy?"
+- For general info: "Tell me more about the instructors | What's included? | How do I get started?"
+
+**REMEMBER**: Only include follow-up questions when you successfully answered from the knowledge base. Skip them for fallback/email collection messages.`;
         
         const res = await this.client.post(geminiUrl, {
           systemInstruction: {
@@ -546,6 +541,22 @@ Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
 
         const candidate = res.data?.candidates?.[0];
         let answer = candidate?.content?.parts?.[0]?.text || '';
+        
+        // Check finish reason
+        const finishReason = candidate?.finishReason;
+        if (finishReason) {
+          console.log(`📝 Finish Reason: ${finishReason}`);
+          
+          if (finishReason === 'MAX_TOKENS') {
+            console.warn('⚠️  Response was cut off due to MAX_TOKENS limit!');
+            console.warn(`Current MAX_OUTPUT_TOKENS: ${RAG_CONFIG.MAX_OUTPUT_TOKENS}`);
+            console.warn('Consider increasing MAX_OUTPUT_TOKENS in RAG_CONFIG');
+          } else if (finishReason === 'SAFETY') {
+            console.warn('⚠️  Response was blocked by safety filters');
+          } else if (finishReason !== 'STOP') {
+            console.warn(`⚠️  Unexpected finish reason: ${finishReason}`);
+          }
+        }
 
         if (res.data?.candidates?.[0]?.groundingMetadata) {
           console.log('✅ Grounding metadata found - RAG is working!');
@@ -555,6 +566,15 @@ Use this EXACT phrase if you don't know the answer: "${FALLBACK_MESSAGE}"
           console.warn('[RAG] No answer generated or too short. Returning fallback.');
           answer = FALLBACK_MESSAGE;
         }
+        
+        // Check if follow-up questions are included
+        if (answer.includes('<<<FOLLOWUP:')) {
+          console.log('✅ Follow-up questions found in response');
+        } else {
+          console.warn('⚠️  No follow-up questions found in response (AI did not generate them)');
+        }
+        
+        console.log(`RAG returned answer (length: ${answer.length}): ${answer.substring(0, 100)}...`);
 
         return answer;
         
