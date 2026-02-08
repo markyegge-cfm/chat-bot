@@ -209,6 +209,8 @@
         color: #1a1a1a;
         border-radius: 20px 20px 20px 4px;
         padding: 12px 18px;
+        font-size: 14.5px;
+        line-height: 1.6;
       }
 
       .bot-message .message-content h1,
@@ -233,13 +235,19 @@
 
       .bot-message .message-content ul,
       .bot-message .message-content ol {
-        margin: 8px 0;
+        margin: 6px 0;
         padding-left: 24px;
+        line-height: 1.3;
       }
 
       .bot-message .message-content li {
-        margin: 4px 0;
+        margin: 0;
+        padding: 0;
         line-height: 1.6;
+      }
+      
+      .bot-message .message-content li + li {
+        margin-top: 2px;
       }
 
       .bot-message .message-content strong {
@@ -737,19 +745,38 @@
     // Links
     text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
 
-    // Unordered lists
-    text = text.replace(/^\* (.*?)$/gm, '<li>$1</li>');
-    text = text.replace(/^- (.*?)$/gm, '<li>$1</li>');
-    text = text.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+    // Unordered lists - convert bullet points to list items
+    text = text.replace(/^\* (.*?)$/gm, '___UL_START___$1___UL_END___');
+    text = text.replace(/^- (.*?)$/gm, '___UL_START___$1___UL_END___');
+    
+    // Group consecutive unordered list items into <ul>
+    text = text.replace(/(___UL_START___[\s\S]+?___UL_END___(\n|$))+/g, function(match) {
+      const items = match.replace(/___UL_START___(.*?)___UL_END___\n?/g, '<li>$1</li>').trim();
+      return '<ul>' + items + '</ul>';
+    });
 
-    // Ordered lists
-    text = text.replace(/^\d+\. (.*?)$/gm, '<li>$1</li>');
+    // Ordered lists - convert numbered items to list items
+    text = text.replace(/^\d+\. (.*?)$/gm, '___OL_START___$1___OL_END___');
+    
+    // Group consecutive ordered list items into <ol>
+    text = text.replace(/(___OL_START___[\s\S]+?___OL_END___(\n|$))+/g, function(match) {
+      const items = match.replace(/___OL_START___(.*?)___OL_END___\n?/g, '<li>$1</li>').trim();
+      return '<ol>' + items + '</ol>';
+    });
 
     // Blockquotes
     text = text.replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>');
 
-    // Line breaks
+    // Line breaks - but NOT inside lists
     text = text.replace(/\n\n/g, '</p><p>');
+    
+    // Remove line breaks between list items
+    text = text.replace(/(<\/li>)\s*<br>\s*(<li>)/g, '$1$2');
+    text = text.replace(/(<ul>)\s*<br>\s*/g, '$1');
+    text = text.replace(/\s*<br>\s*(<\/ul>)/g, '$1');
+    text = text.replace(/(<ol>)\s*<br>\s*/g, '$1');
+    text = text.replace(/\s*<br>\s*(<\/ol>)/g, '$1');
+    
     text = text.replace(/\n/g, '<br>');
 
     // Wrap in paragraphs if not already in block element
