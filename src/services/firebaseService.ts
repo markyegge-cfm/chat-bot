@@ -483,7 +483,7 @@ class FirebaseService {
   /**
    * Start a new conversation session.
    */
-  async startConversation(sessionId: string, userIdentifier?: string): Promise<void> {
+  async startConversation(sessionId: string): Promise<void> {
     if (!this.db) await this.initialize();
 
     const now = new Date();
@@ -492,7 +492,6 @@ class FirebaseService {
 
     await this.db!.collection('conversations').doc(sessionId).set({
       id: sessionId,
-      userId: userIdentifier || 'anonymous',
       title: `Chat on ${dateStr} at ${timeStr}`, // descriptive default title
       avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${sessionId}`,
       status: 'active',

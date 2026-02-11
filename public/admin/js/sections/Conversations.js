@@ -135,6 +135,11 @@ class Conversations {
            }
            
            /* Markdown styling for bot messages */
+           .bot-message-content {
+               font-size: 15px;
+               line-height: 1.6;
+           }
+           
            .bot-message-content h1,
            .bot-message-content h2,
            .bot-message-content h3 {
@@ -154,11 +159,17 @@ class Conversations {
            .bot-message-content ol {
                margin: 8px 0;
                padding-left: 24px;
+               line-height: 1.4;
            }
            
            .bot-message-content li {
-               margin: 4px 0;
-               line-height: 1.6;
+               margin: 0;
+               padding: 0;
+               line-height: 1.5;
+           }
+           
+           .bot-message-content li + li {
+               margin-top: 2px;
            }
            
            .bot-message-content code {
@@ -711,24 +722,43 @@ class Conversations {
       // Links
       text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-[#E5A000] underline hover:text-[#D49000]">$1</a>');
 
-      // Unordered lists
-      text = text.replace(/^\* (.*?)$/gm, '<li class="ml-4">$1</li>');
-      text = text.replace(/^- (.*?)$/gm, '<li class="ml-4">$1</li>');
-      text = text.replace(/(<li class="ml-4">.*<\/li>\n?)+/g, '<ul class="list-disc ml-4 my-2 space-y-1">$&</ul>');
+      // Unordered lists - convert bullet points to list items
+      text = text.replace(/^\* (.*?)$/gm, '___UL_START___$1___UL_END___');
+      text = text.replace(/^- (.*?)$/gm, '___UL_START___$1___UL_END___');
+      
+      // Group consecutive unordered list items into <ul>
+      text = text.replace(/(___UL_START___[\s\S]+?___UL_END___(\n|$))+/g, function(match) {
+        const items = match.replace(/___UL_START___(.*?)___UL_END___\n?/g, '<li class="ml-4">$1</li>').trim();
+        return '<ul class="list-disc ml-4 my-2">' + items + '</ul>';
+      });
 
-      // Ordered lists
-      text = text.replace(/^\d+\. (.*?)$/gm, '<li class="ml-4">$1</li>');
+      // Ordered lists - convert numbered items to list items
+      text = text.replace(/^\d+\. (.*?)$/gm, '___OL_START___$1___OL_END___');
+      
+      // Group consecutive ordered list items into <ol>
+      text = text.replace(/(___OL_START___[\s\S]+?___OL_END___(\n|$))+/g, function(match) {
+        const items = match.replace(/___OL_START___(.*?)___OL_END___\n?/g, '<li class="ml-4">$1</li>').trim();
+        return '<ol class="list-decimal ml-4 my-2">' + items + '</ol>';
+      });
       
       // Blockquotes
       text = text.replace(/^> (.*?)$/gm, '<blockquote class="border-l-4 border-[#E5A000] pl-3 italic text-gray-600 my-2">$1</blockquote>');
 
-      // Line breaks
-      text = text.replace(/\n\n/g, '</p><p class="text-[14px] text-gray-700 leading-relaxed my-2">');
+      // Line breaks - but NOT inside lists
+      text = text.replace(/\n\n/g, '</p><p class="text-[15px] text-gray-700 leading-relaxed my-2">');
+      
+      // Remove line breaks between list items
+      text = text.replace(/(<\/li>)\s*<br>\s*(<li)/g, '$1$2');
+      text = text.replace(/(<ul[^>]*>)\s*<br>\s*/g, '$1');
+      text = text.replace(/\s*<br>\s*(<\/ul>)/g, '$1');
+      text = text.replace(/(<ol[^>]*>)\s*<br>\s*/g, '$1');
+      text = text.replace(/\s*<br>\s*(<\/ol>)/g, '$1');
+      
       text = text.replace(/\n/g, '<br>');
 
       // Wrap in paragraphs if not already in block element
       if (!text.match(/^<(h[1-6]|ul|ol|pre|blockquote)/)) {
-         text = '<p class="text-[14px] text-gray-700 leading-relaxed">' + text + '</p>';
+         text = '<p class="text-[15px] text-gray-700 leading-relaxed">' + text + '</p>';
       }
 
       return text;

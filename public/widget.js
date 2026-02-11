@@ -188,7 +188,7 @@
       .chatbot-messages::-webkit-scrollbar { display: none; }
 
       .chat-intro-text {
-        font-size: 13.5px;
+        font-size: 16px;
         color: #757575;
         text-align: center;
         margin: 8px 0 16px 0;
@@ -196,7 +196,7 @@
 
       .chatbot-message { max-width: 85%; }
       .chatbot-message p {
-        font-size: 14.5px;
+        font-size: 17px;
         line-height: 1.6;
         padding: 12px 18px;
         margin: 0;
@@ -209,7 +209,7 @@
         color: #1a1a1a;
         border-radius: 20px 20px 20px 4px;
         padding: 12px 18px;
-        font-size: 14.5px;
+        font-size: 17px;
         line-height: 1.6;
       }
 
@@ -221,9 +221,9 @@
         color: #111;
       }
 
-      .bot-message .message-content h1 { font-size: 18px; }
-      .bot-message .message-content h2 { font-size: 16px; }
-      .bot-message .message-content h3 { font-size: 15px; }
+      .bot-message .message-content h1 { font-size: 21px; }
+      .bot-message .message-content h2 { font-size: 19px; }
+      .bot-message .message-content h3 { font-size: 18px; }
 
       .bot-message .message-content p {
         margin: 8px 0;
@@ -281,7 +281,15 @@
       }
 
       .bot-message .message-content a {
-        color: #D59800;
+        color: #1a73e8;
+        text-decoration: none;
+        font-weight: 500;
+        border-bottom: 1px solid #1a73e8;
+        cursor: pointer;
+      }
+
+      .bot-message .message-content a:hover {
+        background: #e8f0fe;
         text-decoration: underline;
       }
 
@@ -293,10 +301,8 @@
       }
 
       .bot-message { align-self: flex-start; }
-
       .user-message { align-self: flex-end; }
       .user-message p { background: #D59800; color: white; border-radius: 20px 20px 4px 20px; }
-
       .message-metadata {
         font-size: 12px;
         color: #8E8E8E;
@@ -459,12 +465,41 @@
         }
         .chatbot-messages { padding: 16px 16px; gap: 10px; }
         .chatbot-input-wrapper { margin: 0 16px 16px 16px; height: 48px; }
+        .chatbot-message { max-width: 90%; }
+        .chatbot-message p { font-size: 16px; padding: 10px 14px; }
+        .bot-message .message-content { font-size: 16px; padding: 10px 14px; }
+        .bot-message .message-content h1 { font-size: 19px; }
+        .bot-message .message-content h2 { font-size: 17px; }
+        .bot-message .message-content h3 { font-size: 16px; }
+        .followup-chip { font-size: 12px; padding: 7px 10px; }
+        .suggestion-chip { font-size: 13px; padding: 9px 14px; }
       }
 
       @media (max-width: 480px) {
         #ai-chatbot-widget { bottom: 12px; right: 12px; }
-        .chatbot-window { width: calc(100vw - 24px); bottom: 60px; }
+        .chatbot-window { 
+          width: calc(100vw - 24px); 
+          height: calc(100vh - 80px);
+          bottom: 60px; 
+        }
         .chatbot-toggle { width: 48px; height: 48px; }
+        .chatbot-message { max-width: 92%; }
+        .chatbot-message p { font-size: 15px; padding: 9px 12px; }
+        .bot-message .message-content { font-size: 15px; padding: 9px 12px; }
+        .bot-message .message-content h1 { font-size: 18px; }
+        .bot-message .message-content h2 { font-size: 16px; }
+        .bot-message .message-content h3 { font-size: 15px; }
+        .header-left img { width: 80px !important; height: 80px !important; }
+        .followup-chip { 
+          font-size: 11px; 
+          padding: 6px 10px;
+          word-break: break-word;
+        }
+        .suggestion-chip { 
+          font-size: 12px; 
+          padding: 8px 12px;
+        }
+        .chatbot-input { font-size: 14px; }
       }
     `;
     document.head.appendChild(style);
@@ -589,11 +624,13 @@
             updateMessageContent(botMessageElement, fullResponse);
 
             const questions = followupMatch[1].split('|').map(q => q.trim()).filter(q => q);
+            // Show up to 3 follow-up questions
             if (questions.length > 0) {
               const followupContainer = document.createElement('div');
               followupContainer.className = 'bot-followup-container';
 
-              questions.forEach(q => {
+              const questionsToShow = questions.slice(0, 3);
+              questionsToShow.forEach(q => {
                 const btn = document.createElement('button');
                 btn.className = 'followup-chip';
                 btn.innerText = q;

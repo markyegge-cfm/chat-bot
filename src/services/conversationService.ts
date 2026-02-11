@@ -15,7 +15,6 @@ interface Message {
 
 interface ConversationSession {
   id: string;
-  userId: string;
   sessionId: string;
   startedAt: string;
   lastMessageAt: string;
