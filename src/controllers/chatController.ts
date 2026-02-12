@@ -64,7 +64,16 @@ const workflow = new StateGraph<ChatState>({
       }
 
       console.log(`RAG retrieval for: ${message.substring(0, 50)}...`);
-      const answer = await vertexAIRag.retrieveContextsWithRAG(message, 5);
+
+      // Fetch conversation history for context
+      let conversationHistory: Array<{sender: string, content: string}> = [];
+      try {
+        conversationHistory = await firebaseService.getConversationMessages(sessionId);
+        console.log(`📜 Retrieved ${conversationHistory.length} previous messages for context`);
+      } catch (historyError) {
+        console.warn('Could not fetch conversation history:', historyError);
+      }
+      const answer = await vertexAIRag.retrieveContextsWithRAG(message, 5, conversationHistory);
 
       console.log(`RAG returned answer (length: ${answer.length}): ${answer.substring(0, 100)}...`);
 
@@ -109,7 +118,6 @@ workflow
 
 const memory = new MemorySaver();
 const graph = workflow.compile({ checkpointer: memory });
-
 function extractEmail(text: string): string | null {
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
   const match = text.match(emailRegex);
@@ -224,7 +232,7 @@ export class ChatController {
             try {
               const existingSession = await firebaseService.getConversation(sessionId);
               if (!existingSession) {
-                await firebaseService.startConversation(sessionId, 'anonymous');
+                await firebaseService.startConversation(sessionId);
                 console.log(`[Conversation] New session created: ${sessionId}`);
               }
             } catch (sessionError) {
@@ -295,7 +303,7 @@ export class ChatController {
         // Create conversation session if it doesn't exist
         const existingSession = await firebaseService.getConversation(sessionId);
         if (!existingSession) {
-          await firebaseService.startConversation(sessionId, 'anonymous');
+          await firebaseService.startConversation(sessionId);
           console.log(`[Conversation] New session created: ${sessionId}`);
         }
 
