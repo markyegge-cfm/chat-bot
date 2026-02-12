@@ -840,6 +840,15 @@
    * Simple markdown parser for common patterns
    */
   function parseMarkdown(text) {
+    // Cleanup: strip malformed HTML attribute fragments accidentally present in text
+    // Examples: " target="_blank">, ' target='_blank'>, rel="noopener" etc.
+    // These can appear due to bad content formatting and should not be rendered.
+    text = text
+      .replace(/"\s*target="_blank">\s*/gi, ' ')
+      .replace(/'\s*target='_blank'>\s*/gi, ' ')
+      .replace(/"\s*rel="noopener[^\"]*">\s*/gi, ' ')
+      .replace(/"\s*rel="noreferrer[^\"]*">\s*/gi, ' ');
+
     // Escape HTML first
     text = text.replace(/&/g, '&amp;')
                .replace(/</g, '&lt;')
@@ -867,8 +876,15 @@
     // Links - markdown format [text](url)
     text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
 
-    // Auto-detect plain URLs and make them clickable
-    text = text.replace(/(^|[^">])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank">$2</a>');
+    // Auto-detect URLs (protocol, www, and bare domains)
+    // 1) Protocol URLs
+    text = text.replace(/(https?:\/\/[^\s<"']+)/g, '<a href="$1" target="_blank">$1</a>');
+    // 2) www-prefixed URLs
+    text = text.replace(/(^|[^A-Za-z0-9\/])(www\.[^\s<"']+)/g, '$1<a href="http://$2" target="_blank">$2</a>');
+    // 3) Bare domains with common TLDs (optional path)
+    text = text.replace(/(^|[\s(])([a-zA-Z0-9][\w.-]*\.(?:io|com|net|org|edu|gov)(?:\/[^\s<"']*)?)/g, function(match, prefix, url){
+      return prefix + '<a href="https://' + url + '" target="_blank">' + url + '</a>';
+    });
 
     // Unordered lists - convert bullet points to list items
     text = text.replace(/^\* (.*?)$/gm, '___UL_START___$1___UL_END___');
