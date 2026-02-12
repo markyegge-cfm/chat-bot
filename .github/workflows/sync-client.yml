@@ -30,4 +30,4 @@ jobs:
           git config user.name "workflow-sync-bot"
           git config user.email "workflow-sync-bot@users.noreply.github.com"
           git remote add production https://$PRODUCTION_SYNC_TOKEN@github.com/markyegge-cfm/chat-bot.git
-          git push client main:main --force-with-lease
+          git push production main:main --force-with-lease
