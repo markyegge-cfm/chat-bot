@@ -1,0 +1,33 @@
+name: Sync Production Repository
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  mirror-to-production:
+    name: Push main into production repo
+    runs-on: ubuntu-latest
+    if: github.repository == 'Faysel-Abdella/rag-langGraph'
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to production repository
+        env:
+          PRODUCTION_SYNC_TOKEN: ${{ secrets.PRODUCTION_SYNC_TOKEN }}
+        run: |
+          if [ -z "$PRODUCTION_SYNC_TOKEN" ]; then
+            echo "PRODUCTION_SYNC_TOKEN secret is not configured" >&2
+            exit 1
+          fi
+          git config user.name "workflow-sync-bot"
+          git config user.email "workflow-sync-bot@users.noreply.github.com"
+          git remote add production https://$PRODUCTION_SYNC_TOKEN@github.com/markyegge-cfm/chat-bot.git
+          git push client main:main --force-with-lease
