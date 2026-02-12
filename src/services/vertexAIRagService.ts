@@ -463,7 +463,7 @@ class VertexAIRagService {
     conversationHistory: Array<{sender: string, content: string}> = []
   ): Promise<string> {
     if (!this.initialized || !this.client) {
-      return 'I apologize, but I\'m currently unavailable. Please try again in a moment.';
+      throw new Error('RAG service not initialized');
     }
 
     const corpusResource = `projects/${this.config.projectId}/locations/${this.config.location}/ragCorpora/${this.config.corpusId}`;
@@ -557,27 +557,45 @@ DO NOT include follow-up questions when you use the fallback message.
 You MUST end your response with 2-3 relevant follow-up questions ONLY when you provide an answer from the knowledge base.
 DO NOT include follow-up questions if you're asking for their email or using the fallback message.
 
-**IMPORTANT - Follow-up Question Validation**:
+**FOLLOW-UP QUESTION RULES - READ CAREFULLY**:
+1. Follow-up questions should be DIRECT, ACTIONABLE questions that users can click/ask
+2. They should be KNOWLEDGE-BASED questions that can be answered from the knowledge base
+3. They should NOT be conversational suggestions or yes/no questions
+
+❌ BAD Examples (DO NOT USE):
+- "Would you like to know more about pricing?" (yes/no question)
+- "What's your main goal - learning the basics or building income?" (conversational, belongs in main answer)
+- "Are you interested in the Elite Course?" (yes/no question)
+- "Would you like to explore other options?" (vague, conversational)
+- "Do you want to know about enrollment?" (yes/no question)
+
+✅ GOOD Examples (USE THESE PATTERNS):
+- "What is the pricing for the Elite Course?"
+- "What topics are covered in Fast Launch?"
+- "How do I enroll in the program?"
+- "What are the system requirements?"
+- "What is included in the course materials?"
+- "What is the refund policy?"
+- "How long does the course take to complete?"
+- "What is the difference between Fast Launch and Elite Course?"
+
+**FOLLOW-UP QUESTION VALIDATION**:
 BEFORE suggesting a follow-up question, you MUST verify that the answer exists in the retrieved context.
 - ONLY suggest questions that you can actually answer based on the knowledge base chunks you received.
 - DO NOT suggest questions about topics not covered in the retrieved context.
 - DO NOT make up follow-up questions - base them strictly on information present in the context.
-- If the context mentions pricing, you can suggest "What is the pricing?"
+- If the context mentions pricing, you can suggest "What is the pricing for [course name]?"
 - If the context does NOT mention refund policy, DO NOT suggest "What is the refund policy?"
 
 Format EXACTLY as shown below (copy this format precisely):
 
-<<<FOLLOWUP: What is the cost of the Elite Course? | How do I enroll? | What are the requirements?>>>
-
-Examples:
-- For course questions: "What is the pricing? | What topics are covered? | How long is the course?"
-- For enrollment: "When does it start? | What are the payment options? | Is there a refund policy?"
-- For general info: "Tell me more about the instructors | What's included? | How do I get started?"
+<<<FOLLOWUP: What is the pricing for Fast Launch? | What topics are covered? | How do I enroll?>>>
 
 **REMEMBER**: 
 1. Only include follow-up questions when you successfully answered from the knowledge base. 
 2. Skip them for fallback/email collection messages.
-3. NEVER suggest questions you cannot answer based on the retrieved context.`;
+3. NEVER suggest questions you cannot answer based on the retrieved context.
+4. Follow-up questions must be DIRECT, SPECIFIC, and ACTIONABLE - not conversational suggestions or yes/no questions.`;
         
         // Build conversation contents with history
         const contents = [];
@@ -668,8 +686,8 @@ Examples:
           console.warn(`⚠️  Rate limit hit (429). Retrying... (${attempt}/${maxRetries})`);
           continue; // Retry
         } else if (is429) {
-          console.error('❌ Rate limit exhausted after retries. Returning fallback.');
-          return 'I apologize, but our system is experiencing high demand right now. Please try again in a moment.';
+          console.error('❌ Rate limit exhausted after retries.');
+          throw new Error('RATE_LIMIT_EXCEEDED');
         }
         
         // For non-429 errors, fail immediately
@@ -682,7 +700,7 @@ Examples:
     }
 
     // If we get here, a non-retryable error occurred
-    return FALLBACK_MESSAGE;
+    throw new Error('RAG_SERVICE_ERROR');
   }
 
   /**
