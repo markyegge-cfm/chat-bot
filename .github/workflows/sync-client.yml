@@ -13,21 +13,24 @@ jobs:
     name: Push main into production repo
     runs-on: ubuntu-latest
     if: github.repository == 'Faysel-Abdella/rag-langGraph'
+
     steps:
-      - name: Check out main
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Push to production repository
-        env:
-          PRODUCTION_SYNC_TOKEN: ${{ secrets.PRODUCTION_SYNC_TOKEN }}
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
+
+      - name: Configure Git
         run: |
-          if [ -z "$PRODUCTION_SYNC_TOKEN" ]; then
-            echo "PRODUCTION_SYNC_TOKEN secret is not configured" >&2
-            exit 1
-          fi
           git config user.name "workflow-sync-bot"
           git config user.email "workflow-sync-bot@users.noreply.github.com"
-          git remote add production https://$PRODUCTION_SYNC_TOKEN@github.com/markyegge-cfm/chat-bot.git
+
+      - name: Push to production repository
+        run: |
+          git remote add production git@github.com:markyegge-cfm/chat-bot.git
           git push production main:main --force-with-lease
