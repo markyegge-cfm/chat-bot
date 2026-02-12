@@ -211,6 +211,9 @@
         padding: 12px 18px;
         font-size: 17px;
         line-height: 1.6;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        max-width: 100%;
       }
 
       .bot-message .message-content h1,
@@ -231,6 +234,8 @@
         background: transparent;
         color: #1a1a1a;
         line-height: 1.6;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
       }
 
       .bot-message .message-content ul,
@@ -238,12 +243,16 @@
         margin: 6px 0;
         padding-left: 24px;
         line-height: 1.3;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
       }
 
       .bot-message .message-content li {
         margin: 0;
         padding: 0;
         line-height: 1.6;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
       }
       
       .bot-message .message-content li + li {
@@ -286,6 +295,8 @@
         font-weight: 500;
         border-bottom: 1px solid #1a73e8;
         cursor: pointer;
+        word-break: break-all;
+        overflow-wrap: break-word;
       }
 
       .bot-message .message-content a:hover {
@@ -466,11 +477,33 @@
         .chatbot-messages { padding: 16px 16px; gap: 10px; }
         .chatbot-input-wrapper { margin: 0 16px 16px 16px; height: 48px; }
         .chatbot-message { max-width: 90%; }
-        .chatbot-message p { font-size: 16px; padding: 10px 14px; }
-        .bot-message .message-content { font-size: 16px; padding: 10px 14px; }
+        .chatbot-message p { 
+          font-size: 16px; 
+          padding: 10px 14px; 
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+        }
+        .bot-message .message-content { 
+          font-size: 16px; 
+          padding: 10px 14px;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          max-width: 100%;
+        }
         .bot-message .message-content h1 { font-size: 19px; }
         .bot-message .message-content h2 { font-size: 17px; }
         .bot-message .message-content h3 { font-size: 16px; }
+        .bot-message .message-content p,
+        .bot-message .message-content ul,
+        .bot-message .message-content ol,
+        .bot-message .message-content li {
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+        }
+        .bot-message .message-content a {
+          word-break: break-all;
+          overflow-wrap: break-word;
+        }
         .followup-chip { font-size: 12px; padding: 7px 10px; }
         .suggestion-chip { font-size: 13px; padding: 9px 14px; }
       }
@@ -484,11 +517,33 @@
         }
         .chatbot-toggle { width: 48px; height: 48px; }
         .chatbot-message { max-width: 92%; }
-        .chatbot-message p { font-size: 15px; padding: 9px 12px; }
-        .bot-message .message-content { font-size: 15px; padding: 9px 12px; }
+        .chatbot-message p { 
+          font-size: 15px; 
+          padding: 9px 12px;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+        }
+        .bot-message .message-content { 
+          font-size: 15px; 
+          padding: 9px 12px;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          max-width: 100%;
+        }
         .bot-message .message-content h1 { font-size: 18px; }
         .bot-message .message-content h2 { font-size: 16px; }
         .bot-message .message-content h3 { font-size: 15px; }
+        .bot-message .message-content p,
+        .bot-message .message-content ul,
+        .bot-message .message-content ol,
+        .bot-message .message-content li {
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+        }
+        .bot-message .message-content a {
+          word-break: break-all;
+          overflow-wrap: break-word;
+        }
         .header-left img { width: 80px !important; height: 80px !important; }
         .followup-chip { 
           font-size: 11px; 
@@ -779,8 +834,11 @@
     // Inline code
     text = text.replace(/`(.*?)`/g, '<code>$1</code>');
 
-    // Links
+    // Links - markdown format [text](url)
     text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+    // Auto-detect plain URLs and make them clickable
+    text = text.replace(/(^|[^">])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank">$2</a>');
 
     // Unordered lists - convert bullet points to list items
     text = text.replace(/^\* (.*?)$/gm, '___UL_START___$1___UL_END___');
