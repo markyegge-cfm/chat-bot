@@ -138,13 +138,27 @@ class FirebaseService {
   }
 
   /**
-   * Search cache for a previously answered identical question.
+   * Search cache for a previously answered question within the same session.
+   * Session-aware caching: Same user asking same question gets cached answer.
+   * Different users asking same question get separate cache entries.
+   * 
+   * @param question - The current user question
+   * @param sessionId - The session ID to scope the cache
+   * @returns Cached answer if found for this session+question, null otherwise
    */
-  async getCachedAnswer(question: string): Promise<string | null> {
+  async getCachedAnswer(question: string, sessionId: string): Promise<string | null> {
     if (!this.db) await this.initialize();
 
     try {
       const sanitizedQ = question.trim().toLowerCase();
+      
+      // Don't cache conversational/memory questions
+      const memoryKeywords = ['what was', 'what did i', 'my first', 'my previous', 'earlier', 'before'];
+      if (memoryKeywords.some(keyword => sanitizedQ.includes(keyword))) {
+        console.log('⏭️  Skipping cache for memory/conversational question');
+        return null;
+      }
+      
       const snapshot = await this.db!
         .collection('artifacts')
         .doc(process.env.PROJECT_ID || 'default')
@@ -152,12 +166,15 @@ class FirebaseService {
         .doc('data')
         .collection('chat_cache')
         .where('question', '==', sanitizedQ)
+        .where('sessionId', '==', sessionId)
         .limit(1)
         .get();
 
       if (snapshot.empty) return null;
 
-      return snapshot.docs[0].data().answer;
+      const cacheData = snapshot.docs[0].data();
+      console.log(`✅ Cache HIT for session: ${sessionId.substring(0, 20)}...`);
+      return cacheData.answer;
     } catch (error) {
       console.error('Cache lookup failed:', error);
       return null;
@@ -165,14 +182,38 @@ class FirebaseService {
   }
 
   /**
-   * Save a new Q&A pair to the cache.
+   * Save a new Q&A pair to the session-scoped cache.
+   * Only caches knowledge-based answers (not conversational/fallback/memory responses).
+   * 
+   * @param question - The user's question
+   * @param answer - The AI's answer
+   * @param sessionId - The session ID to scope the cache
+   * @param shouldCache - Whether this answer should be cached
    */
-  async saveToCache(question: string, answer: string): Promise<void> {
+  async saveToCache(
+    question: string, 
+    answer: string, 
+    sessionId: string,
+    shouldCache: boolean = true
+  ): Promise<void> {
     if (!this.db) await this.initialize();
+    
+    // Don't cache if explicitly disabled or answer is too short (likely conversational)
+    if (!shouldCache || answer.length < 50) {
+      console.log(`⏭️  Skipping cache save (shouldCache: ${shouldCache}, length: ${answer.length})`);
+      return;
+    }
 
     try {
       const sanitizedQ = question.trim().toLowerCase();
       const appId = process.env.PROJECT_ID || 'default';
+      
+      // Don't cache conversational/memory questions
+      const memoryKeywords = ['what was', 'what did i', 'my first', 'my previous', 'earlier', 'before'];
+      if (memoryKeywords.some(keyword => sanitizedQ.includes(keyword))) {
+        console.log('⏭️  Skipping cache for memory/conversational question');
+        return;
+      }
 
       await this.db!
         .collection('artifacts')
@@ -183,8 +224,11 @@ class FirebaseService {
         .add({
           question: sanitizedQ,
           answer: answer,
+          sessionId: sessionId,
           timestamp: admin.firestore.FieldValue.serverTimestamp()
         });
+      
+      console.log(`💾 Cached answer for session: ${sessionId.substring(0, 20)}...`);
     } catch (error) {
       console.error('Failed to save to cache:', error);
     }

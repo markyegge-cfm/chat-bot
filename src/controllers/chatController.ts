@@ -31,7 +31,7 @@ const workflow = new StateGraph<ChatState>({
     }
   }
 })
-  // @ts-ignore - LangGraph typing complexity
+  // Session-scoped cache check - Same user asking same question gets cached answer
   .addNode("check_cache", async (state: ChatState) => {
     try {
       const { message, sessionId } = state;
@@ -40,19 +40,20 @@ const workflow = new StateGraph<ChatState>({
         return { answer: "No message provided", cached: false };
       }
 
-      console.log(`Checking cache for: ${message.substring(0, 50)}...`);
-      const cachedAnswer = await firebaseService.getCachedAnswer(message);
+      console.log(`Checking session cache for: ${message.substring(0, 50)}...`);
+      
+      const cachedAnswer = await firebaseService.getCachedAnswer(message, sessionId);
 
       if (cachedAnswer) {
-        console.log(`Cache hit for message: ${message.substring(0, 50)}...`);
+        console.log(`✅ Session cache HIT for: ${message.substring(0, 50)}...`);
         return { answer: cachedAnswer, cached: true };
       }
 
-      console.log('No cache hit');
+      console.log('❌ Cache miss - will query RAG');
       return { cached: false };
     } catch (error) {
       console.error('Error in check_cache node:', error);
-      return { answer: "Error checking cache", cached: false };
+      return { cached: false }; // On error, skip cache and use RAG
     }
   })
   .addNode("rag_retrieval", async (state: ChatState) => {
@@ -77,19 +78,38 @@ const workflow = new StateGraph<ChatState>({
 
       console.log(`RAG returned answer (length: ${answer.length}): ${answer.substring(0, 100)}...`);
 
-      if (answer !== FALLBACK_MESSAGE) {
+      // Save to session-scoped cache if answer is substantial and not a fallback
+      const shouldCache = answer !== FALLBACK_MESSAGE && answer.length >= 50;
+      if (shouldCache) {
         try {
-          await firebaseService.saveToCache(message, answer);
-          console.log('Saved answer to Firebase cache');
+          await firebaseService.saveToCache(message, answer, sessionId, true);
+          console.log('Saved to session cache');
         } catch (cacheError) {
           console.warn('Failed to save to cache:', cacheError);
         }
       }
 
       return { answer, cached: false };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in rag_retrieval node:', error);
-      return { answer: "Sorry, I encountered an error while processing your request.", cached: false };
+      
+      // Handle specific error types with user-friendly messages
+      if (error.message === 'RAG service not initialized') {
+        return { 
+          answer: "I apologize, but I'm currently starting up. Please try again in a moment.", 
+          cached: false 
+        };
+      } else if (error.message === 'RATE_LIMIT_EXCEEDED') {
+        return { 
+          answer: "I apologize, but our system is experiencing high demand right now. Please try again in a moment.", 
+          cached: false 
+        };
+      } else {
+        return { 
+          answer: "I apologize, but I'm experiencing technical difficulties. Please try again in a moment, or share your email and our team will get back to you.", 
+          cached: false 
+        };
+      }
     }
   })
   .addNode("format_response", async (state: ChatState) => {
@@ -123,17 +143,13 @@ function extractEmail(text: string): string | null {
   const match = text.match(emailRegex);
   return match ? match[0] : null;
 }
-
 const TYPING_DELAY_CACHED = 15;
 const TYPING_DELAY_GENERATED = 30;
-
 async function streamTextToResponse(res: Response, text: string, metadata: { isCached: boolean; sessionId: string }) {
   const words = text.split(' ');
-  
   for (let i = 0; i < words.length; i++) {
     const word = words[i];
     const chunk = i === words.length - 1 ? word : word + ' ';
-    
     res.write(`data: ${JSON.stringify({
       chunk,
       ...metadata
