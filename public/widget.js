@@ -554,7 +554,37 @@
           font-size: 12px; 
           padding: 8px 12px;
         }
-        .chatbot-input { font-size: 14px; }
+        .chatbot-input { font-size: 16px; } /* Prevents zoom on iOS */
+        .chatbot-input-wrapper { height: 50px; } /* Better tap target */
+      }
+
+      /* iPhone 13 and similar devices (390x844) */
+      @media (max-width: 430px) and (min-height: 800px) {
+        .chatbot-window {
+          width: calc(100vw - 20px);
+          height: calc(100vh - 100px);
+          max-height: none;
+          bottom: 70px;
+        }
+        .chatbot-messages {
+          padding: 12px;
+        }
+        .chatbot-header {
+          padding: 12px 16px;
+        }
+        .header-left img {
+          width: 70px !important;
+          height: 70px !important;
+        }
+        .chatbot-input-wrapper {
+          margin: 0 12px 12px 12px;
+          height: 52px;
+        }
+        .chatbot-send-btn {
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
+        }
       }
     `;
     document.head.appendChild(style);

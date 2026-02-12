@@ -83,18 +83,24 @@ class VertexAIRagService {
       throw new Error('Missing PROJECT_ID or CORPUS_NAME');
     }
 
-    const accessToken = await this.getAccessToken();
+    // Create axios client WITHOUT a token - we'll add it per-request
     this.client = axios.create({
       headers: {
-        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      timeout: 60000, // Increased for import operations
+      timeout: 60000,
+    });
+
+    // Add interceptor to get fresh token for EVERY request
+    this.client.interceptors.request.use(async (config) => {
+      const accessToken = await this.getAccessToken();
+      config.headers.Authorization = `Bearer ${accessToken}`;
+      return config;
     });
 
     await this.resolveCorpus();
     this.initialized = true;
-    console.log('✅ Vertex AI RAG Service initialized');
+    console.log('✅ Vertex AI RAG Service initialized with auto-refreshing tokens');
   }
 
 
