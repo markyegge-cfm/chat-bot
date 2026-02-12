@@ -1624,3 +1624,153 @@ textarea.form-control {
 .widget-settings-card:hover {
   transform: translateY(-2px);
 }
+
+/* ============================================
+   WIDGET SETTINGS MOBILE RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+  /* Widget Settings Container */
+  .bg-white.rounded-2xl.shadow {
+    border-radius: 16px;
+    margin-bottom: 20px;
+  }
+
+  /* Header adjustments */
+  .bg-white.rounded-2xl .flex.items-center.justify-between.p-6 {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  /* Save button full width on mobile */
+  #save-widget-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Content padding */
+  .bg-white.rounded-2xl .p-6.space-y-6 {
+    padding: 16px;
+  }
+
+  /* Suggestion input containers */
+  #suggestions-container .flex.items-center.gap-3 {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  #suggestions-container input[type="text"] {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  #suggestions-container button {
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Smaller padding on small devices */
+  .bg-white.rounded-2xl .flex.items-center.justify-between.p-6,
+  .bg-white.rounded-2xl .p-6.space-y-6 {
+    padding: 12px;
+  }
+
+  /* Title size */
+  .bg-white.rounded-2xl h2 {
+    font-size: 18px;
+  }
+
+  /* Greeting input */
+  #greeting-message {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  /* Suggestion number badge */
+  #suggestions-container .min-w-\[32px\] {
+    min-width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  /* Add button */
+  #add-suggestion-btn {
+    font-size: 14px;
+    padding: 10px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra small screens */
+  .bg-white.rounded-2xl {
+    border-radius: 12px;
+  }
+
+  .bg-white.rounded-2xl h2 {
+    font-size: 16px;
+  }
+
+  .bg-white.rounded-2xl .text-sm {
+    font-size: 12px;
+  }
+
+  #save-widget-btn {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  #suggestions-container input[type="text"] {
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+
+  #suggestions-container .min-w-\[32px\] {
+    min-width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  /* Remove icon button size */
+  #suggestions-container button.w-9 {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+
+  #add-suggestion-btn {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+}
+
+/* iPhone 13 and similar (390px width) */
+@media (max-width: 430px) and (min-height: 800px) {
+  /* Optimize for tall narrow screens */
+  .bg-white.rounded-2xl .flex.items-center.justify-between.p-6 {
+    padding: 10px;
+  }
+
+  .bg-white.rounded-2xl .p-6.space-y-6 {
+    padding: 10px;
+    gap: 16px;
+  }
+
+  #greeting-message,
+  #suggestions-container input[type="text"] {
+    font-size: 16px; /* Prevents iOS zoom */
+    padding: 12px;
+  }
+
+  /* Better tap targets for iOS */
+  #save-widget-btn,
+  #add-suggestion-btn {
+    min-height: 44px; /* iOS recommended tap target */
+  }
+
+  #suggestions-container button.w-9 {
+    width: 44px;
+    height: 44px;
+  }
+}
