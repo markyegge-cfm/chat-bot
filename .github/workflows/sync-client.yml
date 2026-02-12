@@ -33,4 +33,5 @@ jobs:
       - name: Push to production repository
         run: |
           git remote add production git@github.com:markyegge-cfm/chat-bot.git
+          git fetch production main
           git push production main:main --force-with-lease
