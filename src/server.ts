@@ -16,7 +16,16 @@ import vertexAIRag from './services/vertexAIRagService';
 const app = express();
 const PORT: number = parseInt(process.env.PORT || '3000');
 
-app.use(cors());
+// CORS configuration - Allow all origins for widget embedding
+app.use(cors({
+  origin: '*', // Allow all domains to embed the widget
+  credentials: false,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'Content-Type'],
+  maxAge: 86400 // 24 hours
+}));
+
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ limit: '15mb', extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
@@ -29,8 +38,13 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
+// Serve widget.js with explicit CORS headers for WordPress embedding
 app.get('/widget.js', (req: Request, res: Response) => {
-  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
   res.sendFile(path.join(__dirname, '../public/widget.js'));
 });
 
