@@ -11,7 +11,7 @@
 
   async function loadWidgetSettings() {
     try {
-      const response = await fetch('/api/widget-settings');
+      const response = await fetch(`${CONFIG.apiBaseUrl}/api/widget-settings`);
       const { success, data } = await response.json();
       
       if (success && data) {
@@ -69,7 +69,7 @@
         <div class="chatbot-header">
           <div class="header-left">
             <div>
-              <img src="/image/image copy.png" alt="Logo" style="width: 100px; height: 100px; object-fit: contain;">
+              <img src="${CONFIG.apiBaseUrl}/image/image copy.png" alt="Logo" style="width: 100px; height: 100px; object-fit: contain;">
             </div>
       
           </div>
