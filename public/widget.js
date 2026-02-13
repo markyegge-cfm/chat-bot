@@ -435,6 +435,26 @@
         color: #999 !important;
         opacity: 1 !important;
       }
+      
+      .chatbot-input::-webkit-input-placeholder {
+        color: #999 !important;
+        opacity: 1 !important;
+      }
+      
+      .chatbot-input::-moz-placeholder {
+        color: #999 !important;
+        opacity: 1 !important;
+      }
+      
+      .chatbot-input:-ms-input-placeholder {
+        color: #999 !important;
+        opacity: 1 !important;
+      }
+      
+      .chatbot-input::-ms-input-placeholder {
+        color: #999 !important;
+        opacity: 1 !important;
+      }
 
       .chatbot-input:focus {
         outline: none !important;
