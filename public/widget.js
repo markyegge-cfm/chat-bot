@@ -1064,20 +1064,44 @@
    * Simple markdown parser for common patterns
    */
   function parseMarkdown(text) {
-    // Cleanup: strip malformed HTML attribute fragments accidentally present in text
-    // Examples: " target="_blank">, ' target='_blank'>, rel="noopener" etc.
-    // These can appear due to bad content formatting and should not be rendered.
-    text = text
-      .replace(/"\s*target="_blank">\s*/gi, ' ')
-      .replace(/'\s*target='_blank'>\s*/gi, ' ')
-      .replace(/"\s*rel="noopener[^\"]*">\s*/gi, ' ')
-      .replace(/"\s*rel="noreferrer[^\"]*">\s*/gi, ' ');
+    // Step 1: Extract and store all URLs BEFORE any other processing
+    const urlStore = [];
+    let urlCounter = 0;
+    
+    // Extract markdown links first [text](url)
+    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(match, linkText, url) {
+      const placeholder = `<<<URLTOKEN${urlCounter}>>>`;
+      urlStore[urlCounter] = { url: url, linkText: linkText, isMarkdown: true };
+      urlCounter++;
+      return placeholder;
+    });
+    
+    // Extract URLs with protocol (http:// or https://)
+    text = text.replace(/(https?:\/\/[^\s<>"'\[\]()]+)/g, function(url) {
+      // Clean trailing punctuation
+      url = url.replace(/[.,;!?]+$/, '');
+      const placeholder = `<<<URLTOKEN${urlCounter}>>>`;
+      urlStore[urlCounter] = { url: url, hasProtocol: true };
+      urlCounter++;
+      return placeholder;
+    });
+    
+    // Extract URLs without protocol (domain.tld/path)
+    text = text.replace(/\b([a-zA-Z0-9][-a-zA-Z0-9]{0,62}\.(?:com|io|net|org|edu|gov|co|ai|app|dev|uk|us|ca|info|biz)(?:\/[a-zA-Z0-9\-._~:/?#@!$&'()*+,;=%]*)?)\b/g, function(url) {
+      // Clean trailing punctuation
+      url = url.replace(/[.,;!?]+$/, '');
+      const placeholder = `<<<URLTOKEN${urlCounter}>>>`;
+      urlStore[urlCounter] = { url: url, hasProtocol: false };
+      urlCounter++;
+      return placeholder;
+    });
 
-    // Escape HTML first
+    // Step 2: Escape HTML to prevent XSS
     text = text.replace(/&/g, '&amp;')
                .replace(/</g, '&lt;')
                .replace(/>/g, '&gt;');
 
+    // Step 3: Process markdown formatting
     // Headers
     text = text.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
     text = text.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
@@ -1097,42 +1121,52 @@
     // Inline code
     text = text.replace(/`(.*?)`/g, '<code>$1</code>');
 
-    // Links - markdown format [text](url)
-    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-
-    // Auto-detect URLs (protocol, www, and bare domains)
-    // 1) Protocol URLs
-    text = text.replace(/(https?:\/\/[^\s<"']+)/g, '<a href="$1" target="_blank">$1</a>');
-    // 2) www-prefixed URLs
-    text = text.replace(/(^|[^A-Za-z0-9\/])(www\.[^\s<"']+)/g, '$1<a href="http://$2" target="_blank">$2</a>');
-    // 3) Bare domains with common TLDs (optional path)
-    text = text.replace(/(^|[\s(])([a-zA-Z0-9][\w.-]*\.(?:io|com|net|org|edu|gov)(?:\/[^\s<"']*)?)/g, function(match, prefix, url){
-      return prefix + '<a href="https://' + url + '" target="_blank">' + url + '</a>';
+    // Unordered lists
+    text = text.replace(/^\* (.*?)$/gm, '<<<ULSTART>>>$1<<<ULEND>>>');
+    text = text.replace(/^- (.*?)$/gm, '<<<ULSTART>>>$1<<<ULEND>>>');
+    
+    text = text.replace(/(<<<ULSTART>>>[\s\S]+?<<<ULEND>>>(\n|$))+/g, function(match) {
+      const items = match.replace(/<<<ULSTART>>>(.*?)<<<ULEND>>>\n?/g, '&lt;li&gt;$1&lt;/li&gt;').trim();
+      return '&lt;ul&gt;' + items + '&lt;/ul&gt;';
     });
 
-    // Unordered lists - convert bullet points to list items
-    text = text.replace(/^\* (.*?)$/gm, '___UL_START___$1___UL_END___');
-    text = text.replace(/^- (.*?)$/gm, '___UL_START___$1___UL_END___');
+    // Ordered lists
+    text = text.replace(/^\d+\. (.*?)$/gm, '<<<OLSTART>>>$1<<<OLEND>>>');
     
-    // Group consecutive unordered list items into <ul>
-    text = text.replace(/(___UL_START___[\s\S]+?___UL_END___(\n|$))+/g, function(match) {
-      const items = match.replace(/___UL_START___(.*?)___UL_END___\n?/g, '<li>$1</li>').trim();
-      return '<ul>' + items + '</ul>';
-    });
-
-    // Ordered lists - convert numbered items to list items
-    text = text.replace(/^\d+\. (.*?)$/gm, '___OL_START___$1___OL_END___');
-    
-    // Group consecutive ordered list items into <ol>
-    text = text.replace(/(___OL_START___[\s\S]+?___OL_END___(\n|$))+/g, function(match) {
-      const items = match.replace(/___OL_START___(.*?)___OL_END___\n?/g, '<li>$1</li>').trim();
-      return '<ol>' + items + '</ol>';
+    text = text.replace(/(<<<OLSTART>>>[\s\S]+?<<<OLEND>>>(\n|$))+/g, function(match) {
+      const items = match.replace(/<<<OLSTART>>>(.*?)<<<OLEND>>>\n?/g, '&lt;li&gt;$1&lt;/li&gt;').trim();
+      return '&lt;ol&gt;' + items + '&lt;/ol&gt;';
     });
 
     // Blockquotes
-    text = text.replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>');
+    text = text.replace(/^&gt; (.*?)$/gm, '&lt;blockquote&gt;$1&lt;/blockquote&gt;');
 
-    // Line breaks - but NOT inside lists
+    // Step 4: Unescape markdown-generated HTML tags only
+    text = text.replace(/&lt;(\/?)([hH][123]|strong|em|code|pre|ul|ol|li|blockquote)&gt;/g, '<$1$2>');
+
+    // Step 5: Restore URLs as clickable links (handle escaped angle brackets)
+    for (let i = 0; i < urlCounter; i++) {
+      const urlData = urlStore[i];
+      let linkHtml;
+      
+      if (urlData.isMarkdown) {
+        // Markdown link [text](url)
+        linkHtml = `<a href="${urlData.url}" target="_blank">${urlData.linkText}</a>`;
+      } else if (urlData.hasProtocol) {
+        // URL with protocol
+        linkHtml = `<a href="${urlData.url}" target="_blank">${urlData.url}</a>`;
+      } else {
+        // URL without protocol - add https://
+        linkHtml = `<a href="https://${urlData.url}" target="_blank">${urlData.url}</a>`;
+      }
+      
+      // Replace both regular and escaped versions of the placeholder
+      const escapedPlaceholder = `&lt;&lt;&lt;URLTOKEN${i}&gt;&gt;&gt;`;
+      text = text.replace(escapedPlaceholder, linkHtml);
+      text = text.replace(`<<<URLTOKEN${i}>>>`, linkHtml);
+    }
+
+    // Step 6: Line breaks and paragraphs
     text = text.replace(/\n\n/g, '</p><p>');
     
     // Remove line breaks between list items
