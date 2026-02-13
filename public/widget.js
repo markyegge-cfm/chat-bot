@@ -3,6 +3,10 @@
 
   const CONFIG = {
     widgetId: 'ai-chatbot-widget',
+    // Auto-detect the correct API base URL
+    apiBaseUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:3000'  // Adjust port if your local server uses a different one
+      : 'https://cashflowportal.com'
   };
 
   async function loadWidgetSettings() {
@@ -626,7 +630,7 @@
       let botMessageElement = null;
 
       try {
-        const response = await fetch('/api/chat', {
+        const response = await fetch(`${CONFIG.apiBaseUrl}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message, sessionId }),
