@@ -5,8 +5,8 @@
     widgetId: 'ai-chatbot-widget',
     // Auto-detect the correct API base URL
     apiBaseUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      ? 'http://localhost:3000'  // Adjust port if your local server uses a different one
-      : 'https://cashflowportal.com'
+      ? 'http://localhost:3000'  
+      : 'https://chat-bot-service-767432724134.us-west1.run.app'
   };
 
   async function loadWidgetSettings() {
