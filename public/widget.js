@@ -430,8 +430,29 @@
         min-height: auto !important;
         max-height: none !important;
       }
+      
+      #chatbot-input {
+        flex: 1 !important;
+        border: none !important;
+        outline: none !important;
+        font-family: 'Outfit', sans-serif !important;
+        font-size: 14.5px !important;
+        color: #333 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        line-height: normal !important;
+        min-height: auto !important;
+        max-height: none !important;
+      }
 
       .chatbot-input::placeholder {
+        color: #999 !important;
+        opacity: 1 !important;
+      }
+      
+      #chatbot-input::placeholder {
         color: #999 !important;
         opacity: 1 !important;
       }
@@ -441,7 +462,17 @@
         opacity: 1 !important;
       }
       
+      #chatbot-input::-webkit-input-placeholder {
+        color: #999 !important;
+        opacity: 1 !important;
+      }
+      
       .chatbot-input::-moz-placeholder {
+        color: #999 !important;
+        opacity: 1 !important;
+      }
+      
+      #chatbot-input::-moz-placeholder {
         color: #999 !important;
         opacity: 1 !important;
       }
@@ -451,12 +482,28 @@
         opacity: 1 !important;
       }
       
+      #chatbot-input:-ms-input-placeholder {
+        color: #999 !important;
+        opacity: 1 !important;
+      }
+      
       .chatbot-input::-ms-input-placeholder {
+        color: #999 !important;
+        opacity: 1 !important;
+      }
+      
+      #chatbot-input::-ms-input-placeholder {
         color: #999 !important;
         opacity: 1 !important;
       }
 
       .chatbot-input:focus {
+        outline: none !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      
+      #chatbot-input:focus {
         outline: none !important;
         box-shadow: none !important;
         border: none !important;
