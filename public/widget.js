@@ -1,33 +1,41 @@
 (function () {
-  'use strict';
+  "use strict";
 
   const CONFIG = {
-    widgetId: 'ai-chatbot-widget',
+    widgetId: "ai-chatbot-widget",
     // Auto-detect the correct API base URL
-    apiBaseUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      ? 'http://localhost:3000'  
-      : 'https://chat-bot-service-767432724134.us-west1.run.app'
+    apiBaseUrl:
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1"
+        ? "http://localhost:3000"
+        : "https://chat-bot-service-767432724134.us-west1.run.app",
   };
 
   async function loadWidgetSettings() {
     try {
       const response = await fetch(`${CONFIG.apiBaseUrl}/api/widget-settings`);
       const { success, data } = await response.json();
-      
+
       if (success && data) {
         // Update greeting message
-        const greetingText = document.getElementById('greeting-text');
+        const greetingText = document.getElementById("greeting-text");
         if (greetingText) {
           greetingText.textContent = data.greetingMessage;
         }
 
         // Update suggestion chips
-        const suggestionsContainer = document.getElementById('initial-suggestions');
-        if (suggestionsContainer && data.suggestions && data.suggestions.length > 0) {
-          suggestionsContainer.innerHTML = '';
+        const suggestionsContainer = document.getElementById(
+          "initial-suggestions",
+        );
+        if (
+          suggestionsContainer &&
+          data.suggestions &&
+          data.suggestions.length > 0
+        ) {
+          suggestionsContainer.innerHTML = "";
           data.suggestions.forEach((suggestion, index) => {
-            const chip = document.createElement('button');
-            chip.className = 'suggestion-chip';
+            const chip = document.createElement("button");
+            chip.className = "suggestion-chip";
             chip.textContent = `${index + 1}. ${suggestion}`;
             chip.onclick = () => window.sendSuggestion(suggestion);
             suggestionsContainer.appendChild(chip);
@@ -35,7 +43,7 @@
         }
       }
     } catch (error) {
-      console.error('Failed to load widget settings:', error);
+      console.error("Failed to load widget settings:", error);
       // Keep default values if loading fails
     }
   }
@@ -43,7 +51,7 @@
   function initChatbot() {
     if (document.getElementById(CONFIG.widgetId)) return;
 
-    const widgetContainer = document.createElement('div');
+    const widgetContainer = document.createElement("div");
     widgetContainer.id = CONFIG.widgetId;
     widgetContainer.innerHTML = getWidgetHTML();
     document.body.appendChild(widgetContainer);
@@ -54,8 +62,8 @@
 
     // Expose sendSuggestion globally
     window.sendSuggestion = (text) => {
-      const input = document.getElementById('chatbot-input');
-      const sendBtn = document.getElementById('chatbot-send');
+      const input = document.getElementById("chatbot-input");
+      const sendBtn = document.getElementById("chatbot-send");
       if (input && sendBtn) {
         input.value = text;
         sendBtn.click();
@@ -113,7 +121,11 @@
       </div>
 
       <div class="chatbot-toggle-container">
-        <button class="chatbot-toggle" id="chatbot-toggle">
+        <button class="chatbot-toggle-label" id="chatbot-toggle-label" type="button" aria-label="Open chat">
+          <span class="chatbot-toggle-label-text">Chat with us</span>
+          <span class="chatbot-toggle-label-emoji" aria-hidden="true">👋</span>
+        </button>
+        <button class="chatbot-toggle" id="chatbot-toggle" type="button" aria-label="Open chat">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M17 18.4301H13L8.54999 21.39C7.88999 21.83 7 21.3601 7 20.5601V18.4301C4 18.4301 2 16.4301 2 13.4301V7.42999C2 4.42999 4 2.42999 7 2.42999H17C20 2.42999 22 4.42999 22 7.42999V13.4301C22 16.4301 20 18.4301 17 18.4301Z" stroke="white" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M12.0001 11.36V11.15C12.0001 10.47 12.4201 10.11 12.8401 9.82001C13.2501 9.54001 13.66 9.18002 13.66 8.52002C13.66 7.60002 12.9201 6.85999 12.0001 6.85999C11.0801 6.85999 10.3401 7.60002 10.3401 8.52002" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -125,12 +137,13 @@
   }
 
   function injectStyles() {
-    const fontLink = document.createElement('link');
-    fontLink.href = 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap';
-    fontLink.rel = 'stylesheet';
+    const fontLink = document.createElement("link");
+    fontLink.href =
+      "https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap";
+    fontLink.rel = "stylesheet";
     document.head.appendChild(fontLink);
 
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = `
       /* Force light mode - override any dark mode from parent site */
       #ai-chatbot-widget,
@@ -561,20 +574,48 @@
 
       .chatbot-toggle-container {
         display: flex !important;
+        align-items: center !important;
         justify-content: flex-end !important;
+        gap: 12px !important;
       }
 
+      .chatbot-toggle-label {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        background: #FFFFFF !important;
+        color: #111827 !important;
+        border: none !important;
+        border-radius: 22px !important;
+        padding: 12px 22px !important;
+        font-size: 16px !important;
+        font-weight: 500 !important;
+        box-shadow: 0 6px 14px rgba(16, 24, 40, 0.12) !important;
+        cursor: pointer !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease !important;
+        white-space: nowrap !important;
+      }
+      .chatbot-toggle-label:hover,
+      .chatbot-toggle-label:focus {
+        background: #F9FAFB !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 10px 24px rgba(16, 24, 40, 0.14) !important;
+        outline: none !important;
+      }
+      .chatbot-toggle-label-text { letter-spacing: 0.1px !important; }
+      .chatbot-toggle-label-emoji { font-size: 16px !important; }
+
       .chatbot-toggle {
-        width: 56px !important;
-        height: 56px !important;
-        min-width: 56px !important;
-        min-height: 56px !important;
-        background: #D59800 !important;
+        width: 64px !important;
+        height: 64px !important;
+        min-width: 64px !important;
+        min-height: 64px !important;
+        background: #2F32D6 !important;
         border-radius: 50% !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+        box-shadow: 0 8px 18px rgba(47, 50, 214, 0.28) !important;
         cursor: pointer !important;
         border: none !important;
         padding: 0 !important;
@@ -582,15 +623,14 @@
       }
       .chatbot-toggle:hover,
       .chatbot-toggle:focus {
-        background: #D59800 !important;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2) !important;
+        background: #2B2ECC !important;
+        box-shadow: 0 10px 22px rgba(47, 50, 214, 0.32) !important;
         outline: none !important;
         border: none !important;
-        opacity: 0.95 !important;
       }
       .chatbot-toggle svg {
-        width: 24px !important;
-        height: 24px !important;
+        width: 26px !important;
+        height: 26px !important;
         fill: none !important;
       }
       .chatbot-toggle svg path {
@@ -673,6 +713,11 @@
           min-width: 40px !important;
           min-height: 40px !important;
         }
+        .chatbot-toggle-label {
+          padding: 10px 16px !important;
+          font-size: 14px !important;
+          border-radius: 18px !important;
+        }
         .chatbot-message { max-width: 90% !important; }
         .chatbot-message p { 
           font-size: 16px !important; 
@@ -712,15 +757,23 @@
           height: calc(100vh - 80px) !important;
           bottom: 60px !important; 
         }
+        .chatbot-toggle-container {
+          gap: 10px !important;
+        }
+        .chatbot-toggle-label {
+          padding: 9px 14px !important;
+          font-size: 13px !important;
+          border-radius: 16px !important;
+        }
         .chatbot-toggle { 
-          width: 48px !important; 
-          height: 48px !important;
-          min-width: 48px !important;
-          min-height: 48px !important;
+          width: 56px !important; 
+          height: 56px !important;
+          min-width: 56px !important;
+          min-height: 56px !important;
         }
         .chatbot-toggle svg {
-          width: 22px !important;
-          height: 22px !important;
+          width: 24px !important;
+          height: 24px !important;
         }
         .chatbot-send-btn {
           width: 38px !important;
@@ -815,31 +868,45 @@
   }
 
   function attachEventListeners() {
-    const toggleBtn = document.getElementById('chatbot-toggle');
-    const closeBtn = document.getElementById('chatbot-close');
-    const window_ = document.getElementById('chatbot-window');
-    const input = document.getElementById('chatbot-input');
-    const sendBtn = document.getElementById('chatbot-send');
+    const toggleBtn = document.getElementById("chatbot-toggle");
+    const closeBtn = document.getElementById("chatbot-close");
+    const toggleLabel = document.getElementById("chatbot-toggle-label");
+    const window_ = document.getElementById("chatbot-window");
+    const input = document.getElementById("chatbot-input");
+    const sendBtn = document.getElementById("chatbot-send");
 
     const sessionId = getOrCreateSessionId();
 
-    toggleBtn.addEventListener('click', () => {
-      window_.style.display = window_.style.display === 'none' ? 'flex' : 'none';
-      if (window_.style.display === 'flex') input.focus();
-    });
+    const toggleWidget = () => {
+      window_.style.display =
+        window_.style.display === "none" ? "flex" : "none";
+      if (toggleLabel) {
+        toggleLabel.style.display =
+          window_.style.display === "flex" ? "none" : "inline-flex";
+      }
+      if (window_.style.display === "flex") input.focus();
+    };
 
-    closeBtn.addEventListener('click', () => { window_.style.display = 'none'; });
+    toggleBtn.addEventListener("click", toggleWidget);
+    if (toggleLabel) {
+      toggleLabel.addEventListener("click", toggleWidget);
+    }
+
+    closeBtn.addEventListener("click", () => {
+      window_.style.display = "none";
+      if (toggleLabel) toggleLabel.style.display = "inline-flex";
+    });
 
     const handleSend = async () => {
       const message = input.value.trim();
       if (!message) return;
 
-      addMessage(message, 'user');
-      input.value = '';
+      addMessage(message, "user");
+      input.value = "";
       sendBtn.disabled = true;
 
       // Remove initial suggestions if present
-      const initialSuggestions = document.getElementById('initial-suggestions');
+      const initialSuggestions = document.getElementById("initial-suggestions");
       if (initialSuggestions) {
         initialSuggestions.remove();
       }
@@ -851,30 +918,30 @@
 
       try {
         const response = await fetch(`${CONFIG.apiBaseUrl}/api/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message, sessionId }),
         });
 
-        if (!response.ok) throw new Error('Failed to send message');
+        if (!response.ok) throw new Error("Failed to send message");
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let buffer = '';
+        let buffer = "";
 
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || ''; // Keep incomplete line in buffer
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || ""; // Keep incomplete line in buffer
 
           for (const line of lines) {
-            if (!line.trim() || !line.startsWith('data: ')) continue;
-            
-            const dataStr = line.replace('data: ', '').trim();
-            if (!dataStr || dataStr === '[DONE]') continue;
+            if (!line.trim() || !line.startsWith("data: ")) continue;
+
+            const dataStr = line.replace("data: ", "").trim();
+            if (!dataStr || dataStr === "[DONE]") continue;
 
             try {
               const parsed = JSON.parse(dataStr);
@@ -894,9 +961,10 @@
 
                 // Update the message content with markdown rendering
                 updateMessageContent(botMessageElement, fullResponse);
-                
+
                 // Auto-scroll
-                const messagesContainer = document.getElementById('chatbot-messages');
+                const messagesContainer =
+                  document.getElementById("chatbot-messages");
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
               }
 
@@ -907,11 +975,11 @@
                 if (botMessageElement) {
                   updateMessageContent(botMessageElement, parsed.error);
                 } else {
-                  addMessage(parsed.error, 'bot');
+                  addMessage(parsed.error, "bot");
                 }
               }
             } catch (e) {
-              console.debug('Parse error:', e);
+              console.debug("Parse error:", e);
             }
           }
         }
@@ -922,109 +990,121 @@
         }
 
         if (!botMessageElement && !fullResponse) {
-          addMessage('Sorry, I could not generate a response.', 'bot');
+          addMessage("Sorry, I could not generate a response.", "bot");
         }
 
         // Parse Follow-up Questions
         if (fullResponse && botMessageElement) {
           const followupMatch = fullResponse.match(/<<<FOLLOWUP: (.*?)>>>/);
           if (followupMatch) {
-            fullResponse = fullResponse.replace(followupMatch[0], '').trim();
+            fullResponse = fullResponse.replace(followupMatch[0], "").trim();
             updateMessageContent(botMessageElement, fullResponse);
 
-            const questions = followupMatch[1].split('|').map(q => q.trim()).filter(q => q);
+            const questions = followupMatch[1]
+              .split("|")
+              .map((q) => q.trim())
+              .filter((q) => q);
             // Show up to 3 follow-up questions
             if (questions.length > 0) {
-              const followupContainer = document.createElement('div');
-              followupContainer.className = 'bot-followup-container';
+              const followupContainer = document.createElement("div");
+              followupContainer.className = "bot-followup-container";
 
               const questionsToShow = questions.slice(0, 3);
-              questionsToShow.forEach(q => {
-                const btn = document.createElement('button');
-                btn.className = 'followup-chip';
+              questionsToShow.forEach((q) => {
+                const btn = document.createElement("button");
+                btn.className = "followup-chip";
                 btn.innerText = q;
                 btn.onclick = () => window.sendSuggestion(q);
                 followupContainer.appendChild(btn);
               });
 
               botMessageElement.appendChild(followupContainer);
-              const messagesContainer = document.getElementById('chatbot-messages');
+              const messagesContainer =
+                document.getElementById("chatbot-messages");
               messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
           }
 
           // Update metadata with timestamp
-          const metadataNode = botMessageElement.querySelector('.message-metadata');
+          const metadataNode =
+            botMessageElement.querySelector(".message-metadata");
           if (metadataNode) {
-            metadataNode.innerText = `Cashflow AI Agent • ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            metadataNode.innerText = `Cashflow AI Agent • ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
           }
         }
-
       } catch (error) {
-        console.error('Error sending message:', error);
+        console.error("Error sending message:", error);
         if (typingIndicator && typingIndicator.parentNode) {
           typingIndicator.remove();
         }
-        addMessage("Sorry, I'm having trouble connecting. Please try again later.", 'bot');
+        addMessage(
+          "Sorry, I'm having trouble connecting. Please try again later.",
+          "bot",
+        );
       } finally {
         sendBtn.disabled = false;
         input.focus();
       }
     };
 
-    sendBtn.addEventListener('click', handleSend);
-    input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !sendBtn.disabled) handleSend();
+    sendBtn.addEventListener("click", handleSend);
+    input.addEventListener("keypress", (e) => {
+      if (e.key === "Enter" && !sendBtn.disabled) handleSend();
     });
   }
 
   function getOrCreateSessionId() {
-    let sessionId = sessionStorage.getItem('chatbot_session_id');
+    let sessionId = sessionStorage.getItem("chatbot_session_id");
     if (!sessionId) {
-      sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      sessionStorage.setItem('chatbot_session_id', sessionId);
+      sessionId =
+        "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+      sessionStorage.setItem("chatbot_session_id", sessionId);
     }
     return sessionId;
   }
 
   function addMessage(text, sender) {
-    const messagesContainer = document.getElementById('chatbot-messages');
-    const msgDiv = document.createElement('div');
+    const messagesContainer = document.getElementById("chatbot-messages");
+    const msgDiv = document.createElement("div");
     msgDiv.className = `chatbot-message ${sender}-message`;
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const time = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
-    if (sender === 'bot') {
-      const contentDiv = document.createElement('div');
-      contentDiv.className = 'message-content';
+    if (sender === "bot") {
+      const contentDiv = document.createElement("div");
+      contentDiv.className = "message-content";
       contentDiv.innerHTML = parseMarkdown(text);
-      
-      const metadata = document.createElement('div');
-      metadata.className = 'message-metadata';
+
+      const metadata = document.createElement("div");
+      metadata.className = "message-metadata";
       metadata.innerText = `AI Agent • ${time}`;
 
       msgDiv.appendChild(contentDiv);
       msgDiv.appendChild(metadata);
     } else {
-      const p = document.createElement('p');
+      const p = document.createElement("p");
       p.innerText = text;
       msgDiv.appendChild(p);
     }
 
     messagesContainer.appendChild(msgDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    
+
     return msgDiv;
   }
 
   function addTypingIndicator() {
-    const messagesContainer = document.getElementById('chatbot-messages');
-    const msgDiv = document.createElement('div');
-    msgDiv.className = 'chatbot-message bot-message';
-    msgDiv.id = 'typing-indicator';
+    const messagesContainer = document.getElementById("chatbot-messages");
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "chatbot-message bot-message";
+    msgDiv.id = "typing-indicator";
 
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'message-content';
-    contentDiv.innerHTML = '<div class="typing-indicator"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>';
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "message-content";
+    contentDiv.innerHTML =
+      '<div class="typing-indicator"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>';
 
     msgDiv.appendChild(contentDiv);
     messagesContainer.appendChild(msgDiv);
@@ -1034,17 +1114,17 @@
   }
 
   function addStreamingBotMessage() {
-    const messagesContainer = document.getElementById('chatbot-messages');
-    const msgDiv = document.createElement('div');
-    msgDiv.className = 'chatbot-message bot-message';
+    const messagesContainer = document.getElementById("chatbot-messages");
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "chatbot-message bot-message";
 
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'message-content';
-    contentDiv.innerHTML = '';
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "message-content";
+    contentDiv.innerHTML = "";
 
-    const metadata = document.createElement('div');
-    metadata.className = 'message-metadata';
-    metadata.innerText = 'AI Agent • typing...';
+    const metadata = document.createElement("div");
+    metadata.className = "message-metadata";
+    metadata.innerText = "AI Agent • typing...";
 
     msgDiv.appendChild(contentDiv);
     msgDiv.appendChild(metadata);
@@ -1054,7 +1134,7 @@
   }
 
   function updateMessageContent(messageElement, text) {
-    const contentDiv = messageElement.querySelector('.message-content');
+    const contentDiv = messageElement.querySelector(".message-content");
     if (contentDiv) {
       contentDiv.innerHTML = parseMarkdown(text);
     }
@@ -1067,88 +1147,121 @@
     // Step 1: Extract and store all URLs BEFORE any other processing
     const urlStore = [];
     let urlCounter = 0;
-    
+
     // Extract markdown links first [text](url)
-    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(match, linkText, url) {
-      const placeholder = `<<<URLTOKEN${urlCounter}>>>`;
-      urlStore[urlCounter] = { url: url, linkText: linkText, isMarkdown: true };
-      urlCounter++;
-      return placeholder;
-    });
-    
+    text = text.replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      function (match, linkText, url) {
+        const placeholder = `<<<URLTOKEN${urlCounter}>>>`;
+        urlStore[urlCounter] = {
+          url: url,
+          linkText: linkText,
+          isMarkdown: true,
+        };
+        urlCounter++;
+        return placeholder;
+      },
+    );
+
     // Extract URLs with protocol (http:// or https://)
-    text = text.replace(/(https?:\/\/[^\s<>"'\[\]()]+)/g, function(url) {
+    text = text.replace(/(https?:\/\/[^\s<>"'\[\]()]+)/g, function (url) {
       // Clean trailing punctuation
-      url = url.replace(/[.,;!?]+$/, '');
+      url = url.replace(/[.,;!?]+$/, "");
       const placeholder = `<<<URLTOKEN${urlCounter}>>>`;
       urlStore[urlCounter] = { url: url, hasProtocol: true };
       urlCounter++;
       return placeholder;
     });
-    
+
     // Extract URLs without protocol (domain.tld/path)
-    text = text.replace(/\b([a-zA-Z0-9][-a-zA-Z0-9]{0,62}\.(?:com|io|net|org|edu|gov|co|ai|app|dev|uk|us|ca|info|biz)(?:\/[a-zA-Z0-9\-._~:/?#@!$&'()*+,;=%]*)?)\b/g, function(url) {
-      // Clean trailing punctuation
-      url = url.replace(/[.,;!?]+$/, '');
-      const placeholder = `<<<URLTOKEN${urlCounter}>>>`;
-      urlStore[urlCounter] = { url: url, hasProtocol: false };
-      urlCounter++;
-      return placeholder;
-    });
+    text = text.replace(
+      /\b([a-zA-Z0-9][-a-zA-Z0-9]{0,62}\.(?:com|io|net|org|edu|gov|co|ai|app|dev|uk|us|ca|info|biz)(?:\/[a-zA-Z0-9\-._~:/?#@!$&'()*+,;=%]*)?)\b/g,
+      function (url) {
+        // Clean trailing punctuation
+        url = url.replace(/[.,;!?]+$/, "");
+        const placeholder = `<<<URLTOKEN${urlCounter}>>>`;
+        urlStore[urlCounter] = { url: url, hasProtocol: false };
+        urlCounter++;
+        return placeholder;
+      },
+    );
 
     // Step 2: Escape HTML to prevent XSS
-    text = text.replace(/&/g, '&amp;')
-               .replace(/</g, '&lt;')
-               .replace(/>/g, '&gt;');
+    text = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
 
     // Step 3: Process markdown formatting
     // Headers
-    text = text.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
-    text = text.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
-    text = text.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
+    text = text.replace(/^### (.*?)$/gm, "<h3>$1</h3>");
+    text = text.replace(/^## (.*?)$/gm, "<h2>$1</h2>");
+    text = text.replace(/^# (.*?)$/gm, "<h1>$1</h1>");
 
     // Bold
-    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    text = text.replace(/__(.*?)__/g, '<strong>$1</strong>');
+    text = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+    text = text.replace(/__(.*?)__/g, "<strong>$1</strong>");
 
     // Italic
-    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    text = text.replace(/_(.*?)_/g, '<em>$1</em>');
+    text = text.replace(/\*(.*?)\*/g, "<em>$1</em>");
+    text = text.replace(/_(.*?)_/g, "<em>$1</em>");
 
     // Code blocks
-    text = text.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    text = text.replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>");
 
     // Inline code
-    text = text.replace(/`(.*?)`/g, '<code>$1</code>');
+    text = text.replace(/`(.*?)`/g, "<code>$1</code>");
 
     // Unordered lists
-    text = text.replace(/^\* (.*?)$/gm, '<<<ULSTART>>>$1<<<ULEND>>>');
-    text = text.replace(/^- (.*?)$/gm, '<<<ULSTART>>>$1<<<ULEND>>>');
-    
-    text = text.replace(/(<<<ULSTART>>>[\s\S]+?<<<ULEND>>>(\n|$))+/g, function(match) {
-      const items = match.replace(/<<<ULSTART>>>(.*?)<<<ULEND>>>\n?/g, '&lt;li&gt;$1&lt;/li&gt;').trim();
-      return '&lt;ul&gt;' + items + '&lt;/ul&gt;';
-    });
+    text = text.replace(/^\* (.*?)$/gm, "<<<ULSTART>>>$1<<<ULEND>>>");
+    text = text.replace(/^- (.*?)$/gm, "<<<ULSTART>>>$1<<<ULEND>>>");
+
+    text = text.replace(
+      /(<<<ULSTART>>>[\s\S]+?<<<ULEND>>>(\n|$))+/g,
+      function (match) {
+        const items = match
+          .replace(
+            /<<<ULSTART>>>(.*?)<<<ULEND>>>\n?/g,
+            "&lt;li&gt;$1&lt;/li&gt;",
+          )
+          .trim();
+        return "&lt;ul&gt;" + items + "&lt;/ul&gt;";
+      },
+    );
 
     // Ordered lists
-    text = text.replace(/^\d+\. (.*?)$/gm, '<<<OLSTART>>>$1<<<OLEND>>>');
-    
-    text = text.replace(/(<<<OLSTART>>>[\s\S]+?<<<OLEND>>>(\n|$))+/g, function(match) {
-      const items = match.replace(/<<<OLSTART>>>(.*?)<<<OLEND>>>\n?/g, '&lt;li&gt;$1&lt;/li&gt;').trim();
-      return '&lt;ol&gt;' + items + '&lt;/ol&gt;';
-    });
+    text = text.replace(/^\d+\. (.*?)$/gm, "<<<OLSTART>>>$1<<<OLEND>>>");
+
+    text = text.replace(
+      /(<<<OLSTART>>>[\s\S]+?<<<OLEND>>>(\n|$))+/g,
+      function (match) {
+        const items = match
+          .replace(
+            /<<<OLSTART>>>(.*?)<<<OLEND>>>\n?/g,
+            "&lt;li&gt;$1&lt;/li&gt;",
+          )
+          .trim();
+        return "&lt;ol&gt;" + items + "&lt;/ol&gt;";
+      },
+    );
 
     // Blockquotes
-    text = text.replace(/^&gt; (.*?)$/gm, '&lt;blockquote&gt;$1&lt;/blockquote&gt;');
+    text = text.replace(
+      /^&gt; (.*?)$/gm,
+      "&lt;blockquote&gt;$1&lt;/blockquote&gt;",
+    );
 
     // Step 4: Unescape markdown-generated HTML tags only
-    text = text.replace(/&lt;(\/?)([hH][123]|strong|em|code|pre|ul|ol|li|blockquote)&gt;/g, '<$1$2>');
+    text = text.replace(
+      /&lt;(\/?)([hH][123]|strong|em|code|pre|ul|ol|li|blockquote)&gt;/g,
+      "<$1$2>",
+    );
 
     // Step 5: Restore URLs as clickable links (handle escaped angle brackets)
     for (let i = 0; i < urlCounter; i++) {
       const urlData = urlStore[i];
       let linkHtml;
-      
+
       if (urlData.isMarkdown) {
         // Markdown link [text](url)
         linkHtml = `<a href="${urlData.url}" target="_blank">${urlData.linkText}</a>`;
@@ -1159,7 +1272,7 @@
         // URL without protocol - add https://
         linkHtml = `<a href="https://${urlData.url}" target="_blank">${urlData.url}</a>`;
       }
-      
+
       // Replace both regular and escaped versions of the placeholder
       const escapedPlaceholder = `&lt;&lt;&lt;URLTOKEN${i}&gt;&gt;&gt;`;
       text = text.replace(escapedPlaceholder, linkHtml);
@@ -1167,20 +1280,20 @@
     }
 
     // Step 6: Line breaks and paragraphs
-    text = text.replace(/\n\n/g, '</p><p>');
-    
+    text = text.replace(/\n\n/g, "</p><p>");
+
     // Remove line breaks between list items
-    text = text.replace(/(<\/li>)\s*<br>\s*(<li>)/g, '$1$2');
-    text = text.replace(/(<ul>)\s*<br>\s*/g, '$1');
-    text = text.replace(/\s*<br>\s*(<\/ul>)/g, '$1');
-    text = text.replace(/(<ol>)\s*<br>\s*/g, '$1');
-    text = text.replace(/\s*<br>\s*(<\/ol>)/g, '$1');
-    
-    text = text.replace(/\n/g, '<br>');
+    text = text.replace(/(<\/li>)\s*<br>\s*(<li>)/g, "$1$2");
+    text = text.replace(/(<ul>)\s*<br>\s*/g, "$1");
+    text = text.replace(/\s*<br>\s*(<\/ul>)/g, "$1");
+    text = text.replace(/(<ol>)\s*<br>\s*/g, "$1");
+    text = text.replace(/\s*<br>\s*(<\/ol>)/g, "$1");
+
+    text = text.replace(/\n/g, "<br>");
 
     // Wrap in paragraphs if not already in block element
     if (!text.match(/^<(h[1-6]|ul|ol|pre|blockquote)/)) {
-      text = '<p>' + text + '</p>';
+      text = "<p>" + text + "</p>";
     }
 
     return text;
