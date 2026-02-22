@@ -441,6 +441,7 @@
         display: flex !important;
         align-items: center !important;
         background: #FFFFFF !important;
+        background-color: #FFFFFF !important;
         border: none !important;
         border-radius: 0 !important;
         padding: 0 !important;
@@ -450,6 +451,7 @@
 
       .chatbot-input-wrapper:focus-within {
         background: #FFFFFF !important;
+        background-color: #FFFFFF !important;
         border: none !important;
         box-shadow: none !important;
       }
@@ -461,20 +463,32 @@
         font-family: 'Inter', sans-serif !important;
         font-size: 15px !important;
         color: #1F2937 !important;
-        background: transparent !important;
+        background: #FFFFFF !important;
+        background-color: #FFFFFF !important;
         padding: 0 !important;
         margin: 0 12px 0 0 !important;
+        -webkit-text-fill-color: #1F2937 !important;
       }
 
       .chatbot-input::placeholder {
         color: #9CA3AF !important;
-        font-weight: 400 !important;
+        opacity: 1 !important;
+        -webkit-text-fill-color: #9CA3AF !important;
+      }
+      
+      .chatbot-input:focus,
+      .chatbot-input:active {
+        color: #1F2937 !important;
+        background: #FFFFFF !important;
+        background-color: #FFFFFF !important;
+        -webkit-text-fill-color: #1F2937 !important;
       }
 
       .chatbot-send-btn {
         width: 44px !important;
         height: 44px !important;
         background: #4F46E5 !important;
+        background-color: #4F46E5 !important;
         border-radius: 12px !important;
         border: none !important;
         display: flex !important;
@@ -487,6 +501,7 @@
 
       .chatbot-send-btn:hover {
         background: #4338CA !important;
+        background-color: #4338CA !important;
         transform: scale(1.05);
       }
 
@@ -494,6 +509,8 @@
         opacity: 0.5 !important; 
         cursor: not-allowed !important;
         transform: none !important;
+        background: #4F46E5 !important;
+        background-color: #4F46E5 !important;
       }
 
       .chatbot-send-btn svg {
@@ -503,6 +520,8 @@
 
       .chatbot-send-btn svg path {
         stroke: white !important;
+        stroke: #FFFFFF !important;
+        fill: none !important;
       }
 
       /* FOOTER */
