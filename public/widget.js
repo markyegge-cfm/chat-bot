@@ -94,8 +94,8 @@
           <div class="chatbot-input-wrapper">
             <input type="text" class="chatbot-input" placeholder="Enter your message..." id="chatbot-input" />
             <button class="chatbot-send-btn" id="chatbot-send">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M17.5 10L2.5 10M17.5 10L11.25 3.75M17.5 10L11.25 16.25" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 1 !important; visibility: visible !important;">
+                <path d="M17.5 10L2.5 10M17.5 10L11.25 3.75M17.5 10L11.25 16.25" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke: #FFFFFF !important; opacity: 1 !important; visibility: visible !important;"/>
               </svg>
             </button>
           </div>
@@ -111,10 +111,10 @@
           <span class="chatbot-toggle-label-emoji" aria-hidden="true">👋</span>
         </button>
         <button class="chatbot-toggle" id="chatbot-toggle" type="button" aria-label="Open chat">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17 18.4301H13L8.54999 21.39C7.88999 21.83 7 21.3601 7 20.5601V18.4301C4 18.4301 2 16.4301 2 13.4301V7.42999C2 4.42999 4 2.42999 7 2.42999H17C20 2.42999 22 4.42999 22 7.42999V13.4301C22 16.4301 20 18.4301 17 18.4301Z" stroke="white" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12.0001 11.36V11.15C12.0001 10.47 12.4201 10.11 12.8401 9.82001C13.2501 9.54001 13.66 9.18002 13.66 8.52002C13.66 7.60002 12.9201 6.85999 12.0001 6.85999C11.0801 6.85999 10.3401 7.60002 10.3401 8.52002" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M11.9955 13.75H12.0045" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 1 !important; visibility: visible !important;">
+            <path d="M17 18.4301H13L8.54999 21.39C7.88999 21.83 7 21.3601 7 20.5601V18.4301C4 18.4301 2 16.4301 2 13.4301V7.42999C2 4.42999 4 2.42999 7 2.42999H17C20 2.42999 22 4.42999 22 7.42999V13.4301C22 16.4301 20 18.4301 17 18.4301Z" stroke="#FFFFFF" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" style="stroke: #FFFFFF !important; opacity: 1 !important; visibility: visible !important;"/>
+            <path d="M12.0001 11.36V11.15C12.0001 10.47 12.4201 10.11 12.8401 9.82001C13.2501 9.54001 13.66 9.18002 13.66 8.52002C13.66 7.60002 12.9201 6.85999 12.0001 6.85999C11.0801 6.85999 10.3401 7.60002 10.3401 8.52002" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="stroke: #FFFFFF !important; opacity: 1 !important; visibility: visible !important;"/>
+            <path d="M11.9955 13.75H12.0045" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="stroke: #FFFFFF !important; opacity: 1 !important; visibility: visible !important;"/>
           </svg>
         </button>
       </div>
@@ -134,6 +134,31 @@
       #ai-chatbot-widget,
       #ai-chatbot-widget * {
         color-scheme: light !important;
+      }
+
+      /* NUCLEAR SVG FIX - Force all SVG elements to be visible with white stroke */
+      #ai-chatbot-widget svg,
+      #ai-chatbot-widget svg *,
+      button svg,
+      button svg * {
+        opacity: 1 !important;
+        visibility: visible !important;
+        forced-color-adjust: none !important;
+      }
+
+      #ai-chatbot-widget svg path,
+      #ai-chatbot-widget svg line,
+      #ai-chatbot-widget svg circle,
+      #ai-chatbot-widget svg rect,
+      #ai-chatbot-widget svg polyline,
+      #ai-chatbot-widget svg polygon,
+      button svg path,
+      button svg line,
+      button svg circle {
+        stroke: #FFFFFF !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        forced-color-adjust: none !important;
       }
 
       #ai-chatbot-widget {
