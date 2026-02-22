@@ -430,10 +430,11 @@
         font-weight: 400;
       }
 
-      /* INPUT AREA */
+      /* INPUT AREA - AGGRESSIVE WORDPRESS OVERRIDE */
       .chatbot-input-container {
         padding: 20px 20px 20px 20px;
         background: #FFFFFF !important;
+        background-color: #FFFFFF !important;
         border-top: 1px solid #E5E7EB;
       }
 
@@ -457,7 +458,12 @@
         box-shadow: none !important;
       }
 
-      .chatbot-input {
+      /* Ultra-aggressive input field override for WordPress dark mode */
+      #ai-chatbot-widget .chatbot-input,
+      #ai-chatbot-widget input.chatbot-input,
+      #ai-chatbot-widget input[type="text"].chatbot-input,
+      #chatbot-input,
+      input#chatbot-input {
         flex: 1 !important;
         border: none !important;
         outline: none !important;
@@ -471,46 +477,71 @@
         -webkit-text-fill-color: #1F2937 !important;
         forced-color-adjust: none !important;
         -webkit-appearance: none !important;
+        -moz-appearance: none !important;
         appearance: none !important;
+        filter: none !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
       }
 
-      .chatbot-input::placeholder {
+      /* Placeholder overrides for all states */
+      #ai-chatbot-widget .chatbot-input::placeholder,
+      #chatbot-input::placeholder {
         color: #9CA3AF !important;
         opacity: 1 !important;
         -webkit-text-fill-color: #9CA3AF !important;
       }
 
-      /* All browser-specific placeholder selectors for dark mode override */
-      .chatbot-input::-webkit-input-placeholder {
+      #ai-chatbot-widget .chatbot-input::-webkit-input-placeholder,
+      #chatbot-input::-webkit-input-placeholder {
         color: #9CA3AF !important;
         opacity: 1 !important;
         -webkit-text-fill-color: #9CA3AF !important;
       }
       
-      .chatbot-input::-moz-placeholder {
+      #ai-chatbot-widget .chatbot-input::-moz-placeholder,
+      #chatbot-input::-moz-placeholder {
         color: #9CA3AF !important;
         opacity: 1 !important;
       }
       
-      .chatbot-input:-ms-input-placeholder {
+      #ai-chatbot-widget .chatbot-input:-ms-input-placeholder,
+      #chatbot-input:-ms-input-placeholder {
         color: #9CA3AF !important;
         opacity: 1 !important;
       }
       
-      .chatbot-input::-ms-input-placeholder {
+      #ai-chatbot-widget .chatbot-input::-ms-input-placeholder,
+      #chatbot-input::-ms-input-placeholder {
         color: #9CA3AF !important;
         opacity: 1 !important;
       }
       
-      .chatbot-input:focus,
-      .chatbot-input:active {
+      #ai-chatbot-widget .chatbot-input:focus,
+      #ai-chatbot-widget .chatbot-input:active,
+      #chatbot-input:focus,
+      #chatbot-input:active {
         color: #1F2937 !important;
         background: #FFFFFF !important;
         background-color: #FFFFFF !important;
         -webkit-text-fill-color: #1F2937 !important;
+        outline: none !important;
+        box-shadow: none !important;
       }
 
-      .chatbot-send-btn {
+      /* Override any WordPress or theme color filters */
+      #ai-chatbot-widget .chatbot-input[data-color-scheme],
+      #ai-chatbot-widget .chatbot-input[data-theme] {
+        color: #1F2937 !important;
+        background: #FFFFFF !important;
+        -webkit-text-fill-color: #1F2937 !important;
+      }
+
+      /* SEND BUTTON - ULTRA AGGRESSIVE OVERRIDE */
+      #ai-chatbot-widget .chatbot-send-btn,
+      #ai-chatbot-widget button.chatbot-send-btn,
+      #chatbot-send,
+      button#chatbot-send {
         width: 44px !important;
         height: 44px !important;
         background: #4F46E5 !important;
@@ -525,16 +556,21 @@
         flex-shrink: 0 !important;
         forced-color-adjust: none !important;
         -webkit-appearance: none !important;
+        -moz-appearance: none !important;
         appearance: none !important;
+        filter: none !important;
+        box-shadow: none !important;
       }
 
-      .chatbot-send-btn:hover {
+      #ai-chatbot-widget .chatbot-send-btn:hover,
+      #chatbot-send:hover {
         background: #4338CA !important;
         background-color: #4338CA !important;
         transform: scale(1.05);
       }
 
-      .chatbot-send-btn:disabled { 
+      #ai-chatbot-widget .chatbot-send-btn:disabled,
+      #chatbot-send:disabled { 
         opacity: 0.5 !important; 
         cursor: not-allowed !important;
         transform: none !important;
@@ -542,17 +578,21 @@
         background-color: #4F46E5 !important;
       }
 
-      .chatbot-send-btn svg {
+      #ai-chatbot-widget .chatbot-send-btn svg,
+      #chatbot-send svg {
         width: 18px !important;
         height: 18px !important;
         forced-color-adjust: none !important;
+        filter: none !important;
       }
 
-      .chatbot-send-btn svg path {
+      #ai-chatbot-widget .chatbot-send-btn svg path,
+      #chatbot-send svg path {
         stroke: white !important;
         stroke: #FFFFFF !important;
         fill: none !important;
         forced-color-adjust: none !important;
+        filter: none !important;
       }
 
       /* FOOTER */
@@ -580,7 +620,11 @@
         gap: 12px !important;
       }
 
-      .chatbot-toggle-label {
+      /* TOGGLE BUTTONS - ULTRA AGGRESSIVE OVERRIDE */
+      #ai-chatbot-widget .chatbot-toggle-label,
+      #ai-chatbot-widget button.chatbot-toggle-label,
+      #chatbot-toggle-label,
+      button#chatbot-toggle-label {
         display: inline-flex !important;
         align-items: center !important;
         gap: 8px !important;
@@ -598,24 +642,31 @@
         font-family: 'Inter', sans-serif;
         forced-color-adjust: none !important;
         -webkit-appearance: none !important;
+        -moz-appearance: none !important;
         appearance: none !important;
+        filter: none !important;
       }
 
-      .chatbot-toggle-label:hover {
+      #ai-chatbot-widget .chatbot-toggle-label:hover,
+      #chatbot-toggle-label:hover {
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
         transform: translateY(-2px);
       }
 
-      .chatbot-toggle-label-text {
+      #ai-chatbot-widget .chatbot-toggle-label-text {
         color: #111827 !important;
         forced-color-adjust: none !important;
       }
 
-      .chatbot-toggle-label-emoji {
+      #ai-chatbot-widget .chatbot-toggle-label-emoji {
         forced-color-adjust: none !important;
+        filter: none !important;
       }
 
-      .chatbot-toggle {
+      #ai-chatbot-widget .chatbot-toggle,
+      #ai-chatbot-widget button.chatbot-toggle,
+      #chatbot-toggle,
+      button#chatbot-toggle {
         width: 64px !important;
         height: 64px !important;
         background: #4F46E5 !important;
@@ -630,30 +681,38 @@
         transition: all 0.2s ease !important;
         forced-color-adjust: none !important;
         -webkit-appearance: none !important;
+        -moz-appearance: none !important;
         appearance: none !important;
+        filter: none !important;
       }
 
-      .chatbot-toggle:hover {
+      #ai-chatbot-widget .chatbot-toggle:hover,
+      #chatbot-toggle:hover {
         background: #4338CA !important;
         background-color: #4338CA !important;
         box-shadow: 0 10px 24px rgba(79, 70, 229, 0.4) !important;
         transform: translateY(-2px) scale(1.05);
       }
       
-      .chatbot-toggle svg {
+      #ai-chatbot-widget .chatbot-toggle svg,
+      #chatbot-toggle svg {
         width: 26px !important;
         height: 26px !important;
         fill: none !important;
         forced-color-adjust: none !important;
+        filter: none !important;
       }
       
-      .chatbot-toggle svg path,
-      .chatbot-toggle svg line {
+      #ai-chatbot-widget .chatbot-toggle svg path,
+      #ai-chatbot-widget .chatbot-toggle svg line,
+      #chatbot-toggle svg path,
+      #chatbot-toggle svg line {
         stroke: white !important;
         stroke: #FFFFFF !important;
         stroke-width: 2.5 !important;
         fill: none !important;
         forced-color-adjust: none !important;
+        filter: none !important;
       }
 
       /* Mobile Responsive */
