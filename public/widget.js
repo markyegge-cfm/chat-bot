@@ -447,6 +447,7 @@
         padding: 0 !important;
         height: auto !important;
         transition: none !important;
+        forced-color-adjust: none !important;
       }
 
       .chatbot-input-wrapper:focus-within {
@@ -468,12 +469,37 @@
         padding: 0 !important;
         margin: 0 12px 0 0 !important;
         -webkit-text-fill-color: #1F2937 !important;
+        forced-color-adjust: none !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
       }
 
       .chatbot-input::placeholder {
         color: #9CA3AF !important;
         opacity: 1 !important;
         -webkit-text-fill-color: #9CA3AF !important;
+      }
+
+      /* All browser-specific placeholder selectors for dark mode override */
+      .chatbot-input::-webkit-input-placeholder {
+        color: #9CA3AF !important;
+        opacity: 1 !important;
+        -webkit-text-fill-color: #9CA3AF !important;
+      }
+      
+      .chatbot-input::-moz-placeholder {
+        color: #9CA3AF !important;
+        opacity: 1 !important;
+      }
+      
+      .chatbot-input:-ms-input-placeholder {
+        color: #9CA3AF !important;
+        opacity: 1 !important;
+      }
+      
+      .chatbot-input::-ms-input-placeholder {
+        color: #9CA3AF !important;
+        opacity: 1 !important;
       }
       
       .chatbot-input:focus,
@@ -497,6 +523,9 @@
         cursor: pointer !important;
         transition: all 0.2s ease !important;
         flex-shrink: 0 !important;
+        forced-color-adjust: none !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
       }
 
       .chatbot-send-btn:hover {
@@ -516,12 +545,14 @@
       .chatbot-send-btn svg {
         width: 18px !important;
         height: 18px !important;
+        forced-color-adjust: none !important;
       }
 
       .chatbot-send-btn svg path {
         stroke: white !important;
         stroke: #FFFFFF !important;
         fill: none !important;
+        forced-color-adjust: none !important;
       }
 
       /* FOOTER */
@@ -554,6 +585,7 @@
         align-items: center !important;
         gap: 8px !important;
         background: #FFFFFF !important;
+        background-color: #FFFFFF !important;
         color: #111827 !important;
         border: none !important;
         border-radius: 24px !important;
@@ -564,6 +596,9 @@
         cursor: pointer !important;
         transition: all 0.2s ease !important;
         font-family: 'Inter', sans-serif;
+        forced-color-adjust: none !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
       }
 
       .chatbot-toggle-label:hover {
@@ -571,10 +606,20 @@
         transform: translateY(-2px);
       }
 
+      .chatbot-toggle-label-text {
+        color: #111827 !important;
+        forced-color-adjust: none !important;
+      }
+
+      .chatbot-toggle-label-emoji {
+        forced-color-adjust: none !important;
+      }
+
       .chatbot-toggle {
         width: 64px !important;
         height: 64px !important;
         background: #4F46E5 !important;
+        background-color: #4F46E5 !important;
         border-radius: 50% !important;
         display: flex !important;
         align-items: center !important;
@@ -583,10 +628,14 @@
         cursor: pointer !important;
         border: none !important;
         transition: all 0.2s ease !important;
+        forced-color-adjust: none !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
       }
 
       .chatbot-toggle:hover {
         background: #4338CA !important;
+        background-color: #4338CA !important;
         box-shadow: 0 10px 24px rgba(79, 70, 229, 0.4) !important;
         transform: translateY(-2px) scale(1.05);
       }
@@ -595,13 +644,16 @@
         width: 26px !important;
         height: 26px !important;
         fill: none !important;
+        forced-color-adjust: none !important;
       }
       
       .chatbot-toggle svg path,
       .chatbot-toggle svg line {
         stroke: white !important;
+        stroke: #FFFFFF !important;
         stroke-width: 2.5 !important;
         fill: none !important;
+        forced-color-adjust: none !important;
       }
 
       /* Mobile Responsive */
