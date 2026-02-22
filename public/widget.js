@@ -578,21 +578,39 @@
         background-color: #4F46E5 !important;
       }
 
+      /* SVG icon override - nuclear level */
       #ai-chatbot-widget .chatbot-send-btn svg,
-      #chatbot-send svg {
+      #ai-chatbot-widget button.chatbot-send-btn svg,
+      #chatbot-send svg,
+      button#chatbot-send svg,
+      #ai-chatbot-widget svg,
+      .chatbot-send-btn svg {
         width: 18px !important;
         height: 18px !important;
         forced-color-adjust: none !important;
         filter: none !important;
+        opacity: 1 !important;
+        visibility: visible !important;
       }
 
       #ai-chatbot-widget .chatbot-send-btn svg path,
-      #chatbot-send svg path {
-        stroke: white !important;
+      #ai-chatbot-widget button.chatbot-send-btn svg path,
+      #chatbot-send svg path,
+      button#chatbot-send svg path,
+      #ai-chatbot-widget .chatbot-send-btn path,
+      #chatbot-send path,
+      .chatbot-send-btn svg path,
+      .chatbot-send-btn path {
         stroke: #FFFFFF !important;
+        stroke-width: 2 !important;
+        stroke-linecap: round !important;
+        stroke-linejoin: round !important;
         fill: none !important;
         forced-color-adjust: none !important;
         filter: none !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        color: white !important;
       }
 
       /* FOOTER */
@@ -653,14 +671,18 @@
         transform: translateY(-2px);
       }
 
-      #ai-chatbot-widget .chatbot-toggle-label-text {
+      #ai-chatbot-widget .chatbot-toggle-label-text,
+      .chatbot-toggle-label-text {
         color: #111827 !important;
         forced-color-adjust: none !important;
+        filter: none !important;
       }
 
-      #ai-chatbot-widget .chatbot-toggle-label-emoji {
+      #ai-chatbot-widget .chatbot-toggle-label-emoji,
+      .chatbot-toggle-label-emoji {
         forced-color-adjust: none !important;
         filter: none !important;
+        opacity: 1 !important;
       }
 
       #ai-chatbot-widget .chatbot-toggle,
@@ -694,25 +716,46 @@
         transform: translateY(-2px) scale(1.05);
       }
       
+      /* Toggle button SVG - nuclear level override */
       #ai-chatbot-widget .chatbot-toggle svg,
-      #chatbot-toggle svg {
+      #ai-chatbot-widget button.chatbot-toggle svg,
+      #chatbot-toggle svg,
+      button#chatbot-toggle svg,
+      .chatbot-toggle svg {
         width: 26px !important;
         height: 26px !important;
         fill: none !important;
         forced-color-adjust: none !important;
         filter: none !important;
+        opacity: 1 !important;
+        visibility: visible !important;
       }
       
       #ai-chatbot-widget .chatbot-toggle svg path,
       #ai-chatbot-widget .chatbot-toggle svg line,
+      #ai-chatbot-widget button.chatbot-toggle svg path,
+      #ai-chatbot-widget button.chatbot-toggle svg line,
       #chatbot-toggle svg path,
-      #chatbot-toggle svg line {
-        stroke: white !important;
+      #chatbot-toggle svg line,
+      button#chatbot-toggle svg path,
+      button#chatbot-toggle svg line,
+      .chatbot-toggle svg path,
+      .chatbot-toggle svg line,
+      #ai-chatbot-widget .chatbot-toggle path,
+      #ai-chatbot-widget .chatbot-toggle line,
+      #chatbot-toggle path,
+      #chatbot-toggle line {
         stroke: #FFFFFF !important;
-        stroke-width: 2.5 !important;
+        stroke-width: 1.5 !important;
+        stroke-miterlimit: 10 !important;
+        stroke-linecap: round !important;
+        stroke-linejoin: round !important;
         fill: none !important;
         forced-color-adjust: none !important;
         filter: none !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        color: white !important;
       }
 
       /* Mobile Responsive */
