@@ -60,6 +60,12 @@
     loadWidgetSettings();
     attachEventListeners();
 
+    // FORCE SVG VISIBILITY - Override any WordPress dark mode interference
+    forceSVGVisibility();
+    
+    // Re-apply SVG fixes periodically to combat WordPress dark mode
+    setInterval(forceSVGVisibility, 500);
+
     // Expose sendSuggestion globally
     window.sendSuggestion = (text) => {
       const input = document.getElementById("chatbot-input");
@@ -69,6 +75,65 @@
         sendBtn.click();
       }
     };
+  }
+
+  function forceSVGVisibility() {
+    // Force send button SVG
+    const sendSvg = document.querySelector('#chatbot-send svg');
+    const sendPath = document.querySelector('#chatbot-send svg path');
+    
+    if (sendSvg) {
+      sendSvg.setAttribute('width', '20');
+      sendSvg.setAttribute('height', '20');
+      sendSvg.setAttribute('viewBox', '0 0 20 20');
+      sendSvg.style.width = '20px';
+      sendSvg.style.height = '20px';
+      sendSvg.style.minWidth = '20px';
+      sendSvg.style.minHeight = '20px';
+      sendSvg.style.opacity = '1';
+      sendSvg.style.visibility = 'visible';
+      sendSvg.style.display = 'block';
+      sendSvg.style.transform = 'none';
+    }
+    
+    if (sendPath) {
+      sendPath.setAttribute('stroke', '#FFFFFF');
+      sendPath.setAttribute('stroke-width', '2');
+      sendPath.setAttribute('d', 'M17.5 10L2.5 10M17.5 10L11.25 3.75M17.5 10L11.25 16.25');
+      sendPath.style.stroke = '#FFFFFF';
+      sendPath.style.strokeWidth = '2';
+      sendPath.style.opacity = '1';
+      sendPath.style.visibility = 'visible';
+      sendPath.style.fill = 'none';
+    }
+
+    // Force toggle button SVG
+    const toggleSvg = document.querySelector('#chatbot-toggle svg');
+    const togglePaths = document.querySelectorAll('#chatbot-toggle svg path');
+    
+    if (toggleSvg) {
+      toggleSvg.setAttribute('width', '24');
+      toggleSvg.setAttribute('height', '24');
+      toggleSvg.setAttribute('viewBox', '0 0 24 24');
+      toggleSvg.style.width = '24px';
+      toggleSvg.style.height = '24px';
+      toggleSvg.style.minWidth = '24px';
+      toggleSvg.style.minHeight = '24px';
+      toggleSvg.style.opacity = '1';
+      toggleSvg.style.visibility = 'visible';
+      toggleSvg.style.display = 'block';
+      toggleSvg.style.transform = 'none';
+    }
+    
+    togglePaths.forEach(path => {
+      path.setAttribute('stroke', '#FFFFFF');
+      path.setAttribute('stroke-width', '1.5');
+      path.style.stroke = '#FFFFFF';
+      path.style.strokeWidth = '1.5';
+      path.style.opacity = '1';
+      path.style.visibility = 'visible';
+      path.style.fill = 'none';
+    });
   }
 
   function getWidgetHTML() {
@@ -603,19 +668,25 @@
         background-color: #4F46E5 !important;
       }
 
-      /* SVG icon override - nuclear level */
+      /* SVG icon override - COMPREHENSIVE FIX */
       #ai-chatbot-widget .chatbot-send-btn svg,
       #ai-chatbot-widget button.chatbot-send-btn svg,
       #chatbot-send svg,
       button#chatbot-send svg,
-      #ai-chatbot-widget svg,
       .chatbot-send-btn svg {
-        width: 18px !important;
-        height: 18px !important;
+        width: 20px !important;
+        height: 20px !important;
+        min-width: 20px !important;
+        min-height: 20px !important;
+        max-width: 20px !important;
+        max-height: 20px !important;
         forced-color-adjust: none !important;
         filter: none !important;
         opacity: 1 !important;
         visibility: visible !important;
+        display: block !important;
+        transform: none !important;
+        flex-shrink: 0 !important;
       }
 
       #ai-chatbot-widget .chatbot-send-btn svg path,
@@ -636,6 +707,8 @@
         opacity: 1 !important;
         visibility: visible !important;
         color: white !important;
+        transform: none !important;
+        d: path("M17.5 10L2.5 10M17.5 10L11.25 3.75M17.5 10L11.25 16.25") !important;
       }
 
       /* FOOTER */
@@ -741,19 +814,26 @@
         transform: translateY(-2px) scale(1.05);
       }
       
-      /* Toggle button SVG - nuclear level override */
+      /* Toggle button SVG - COMPREHENSIVE FIX */
       #ai-chatbot-widget .chatbot-toggle svg,
       #ai-chatbot-widget button.chatbot-toggle svg,
       #chatbot-toggle svg,
       button#chatbot-toggle svg,
       .chatbot-toggle svg {
-        width: 26px !important;
-        height: 26px !important;
+        width: 24px !important;
+        height: 24px !important;
+        min-width: 24px !important;
+        min-height: 24px !important;
+        max-width: 24px !important;
+        max-height: 24px !important;
         fill: none !important;
         forced-color-adjust: none !important;
         filter: none !important;
         opacity: 1 !important;
         visibility: visible !important;
+        display: block !important;
+        transform: none !important;
+        flex-shrink: 0 !important;
       }
       
       #ai-chatbot-widget .chatbot-toggle svg path,
@@ -780,6 +860,8 @@
         filter: none !important;
         opacity: 1 !important;
         visibility: visible !important;
+        transform: none !important;
+      }
         color: white !important;
       }
 
