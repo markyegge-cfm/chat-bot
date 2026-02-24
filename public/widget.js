@@ -136,30 +136,39 @@
     });
 
     // Force close button SVG (Dark color for white header)
+    const closeBtn = document.querySelector('.header-close-btn');
+    if (closeBtn) {
+      closeBtn.style.setProperty('z-index', '10001', 'important');
+      closeBtn.style.setProperty('display', 'flex', 'important');
+      closeBtn.style.setProperty('align-items', 'center', 'important');
+      closeBtn.style.setProperty('justify-content', 'center', 'important');
+    }
+
     const closeSvg = document.querySelector('.header-close-btn svg');
     const closePaths = document.querySelectorAll('.header-close-btn svg path');
 
     if (closeSvg) {
-      closeSvg.style.width = '24px';
-      closeSvg.style.height = '24px';
+      closeSvg.style.setProperty('width', '24px', 'important');
+      closeSvg.style.setProperty('height', '24px', 'important');
       closeSvg.setAttribute('width', '24');
       closeSvg.setAttribute('height', '24');
-      closeSvg.style.minWidth = '24px';
-      closeSvg.style.minHeight = '24px';
-      closeSvg.style.opacity = '1';
-      closeSvg.style.visibility = 'visible';
-      closeSvg.style.display = 'block';
-      closeSvg.style.transform = 'none';
+      closeSvg.style.setProperty('min-width', '24px', 'important');
+      closeSvg.style.setProperty('min-height', '24px', 'important');
+      closeSvg.style.setProperty('opacity', '1', 'important');
+      closeSvg.style.setProperty('visibility', 'visible', 'important');
+      closeSvg.style.setProperty('display', 'block', 'important');
+      closeSvg.style.setProperty('transform', 'none', 'important');
+      closeSvg.setAttribute('viewBox', '0 0 24 24');
     }
 
     closePaths.forEach(path => {
       path.setAttribute('stroke', '#1F2937');
       path.setAttribute('stroke-width', '2');
-      path.style.stroke = '#1F2937';
-      path.style.strokeWidth = '2';
-      path.style.opacity = '1';
-      path.style.visibility = 'visible';
-      path.style.fill = 'none';
+      path.style.setProperty('stroke', '#1F2937', 'important');
+      path.style.setProperty('stroke-width', '2px', 'important');
+      path.style.setProperty('opacity', '1', 'important');
+      path.style.setProperty('visibility', 'visible', 'important');
+      path.style.setProperty('fill', 'none', 'important');
     });
   }
 
@@ -1080,6 +1089,12 @@
       const initialSuggestions = document.getElementById("initial-suggestions");
       if (initialSuggestions) {
         initialSuggestions.remove();
+      }
+
+      // Also remove the greeting message
+      const greetingMsg = document.querySelector(".chatbot-messages .header-text");
+      if (greetingMsg) {
+        greetingMsg.remove(); 
       }
 
       // Add typing indicator
