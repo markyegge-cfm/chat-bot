@@ -142,6 +142,13 @@
       closeBtn.style.setProperty('display', 'flex', 'important');
       closeBtn.style.setProperty('align-items', 'center', 'important');
       closeBtn.style.setProperty('justify-content', 'center', 'important');
+      closeBtn.style.setProperty('background', 'transparent', 'important');
+      closeBtn.style.setProperty('background-color', 'transparent', 'important');
+      closeBtn.style.setProperty('border', 'none', 'important');
+      closeBtn.style.setProperty('box-shadow', 'none', 'important');
+      // Override any dark mode filters
+      closeBtn.style.setProperty('filter', 'none', 'important');
+      closeBtn.style.setProperty('backdrop-filter', 'none', 'important');
     }
 
     const closeSvg = document.querySelector('.header-close-btn svg');
@@ -320,8 +327,9 @@
         width: 32px;
         height: 32px;
         border-radius: 50%;
-        background: transparent;
-        border: none;
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -329,10 +337,40 @@
         transition: background-color 0.2s ease;
         padding: 0;
         z-index: 10001; /* Ensure on top */
+        filter: none !important;
+        backdrop-filter: none !important;
+        box-shadow: none !important;
       }
 
       .header-close-btn:hover {
-        background-color: #F3F4F6;
+        background-color: #F3F4F6 !important;
+      }
+
+      /* EXTREMELY SPECIFIC CLOSE BUTTON OVERRIDE */
+      #ai-chatbot-widget #header-close,
+      #header-close,
+      button#header-close,
+      #ai-chatbot-widget button.header-close-btn,
+      button.header-close-btn {
+        background: transparent !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
+        color: transparent !important;
+        min-height: 32px !important;
+        min-width: 32px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      }
+      
+      #ai-chatbot-widget #header-close:hover,
+      #header-close:hover,
+      button#header-close:hover,
+      #ai-chatbot-widget button.header-close-btn:hover {
+        background-color: #F3F4F6 !important;
       }
       
       /* Overwrite for Close Button SVG - Make it Dark */
