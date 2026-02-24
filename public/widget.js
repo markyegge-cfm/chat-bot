@@ -134,6 +134,33 @@
       path.style.visibility = 'visible';
       path.style.fill = 'none';
     });
+
+    // Force close button SVG (Dark color for white header)
+    const closeSvg = document.querySelector('.header-close-btn svg');
+    const closePaths = document.querySelectorAll('.header-close-btn svg path');
+
+    if (closeSvg) {
+      closeSvg.style.width = '24px';
+      closeSvg.style.height = '24px';
+      closeSvg.setAttribute('width', '24');
+      closeSvg.setAttribute('height', '24');
+      closeSvg.style.minWidth = '24px';
+      closeSvg.style.minHeight = '24px';
+      closeSvg.style.opacity = '1';
+      closeSvg.style.visibility = 'visible';
+      closeSvg.style.display = 'block';
+      closeSvg.style.transform = 'none';
+    }
+
+    closePaths.forEach(path => {
+      path.setAttribute('stroke', '#1F2937');
+      path.setAttribute('stroke-width', '2');
+      path.style.stroke = '#1F2937';
+      path.style.strokeWidth = '2';
+      path.style.opacity = '1';
+      path.style.visibility = 'visible';
+      path.style.fill = 'none';
+    });
   }
 
   function getWidgetHTML() {
@@ -142,14 +169,19 @@
         <div class="chatbot-header">
           <div class="header-content">
             <img src="${CONFIG.apiBaseUrl}/image/image copy.png" alt="Logo" class="header-logo">
-            <div class="header-text">
-              <div class="header-greeting">Hi there</div>
-              <div class="header-subtitle">Welcome to our website. Ask us anything</div>
-            </div>
+            <button class="header-close-btn" id="header-close" aria-label="Close chat">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18" stroke="#1F2937" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M6 6L18 18" stroke="#1F2937" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
           </div>
         </div>
 
         <div class="chatbot-messages" id="chatbot-messages">
+          <div class="header-text">
+            <div class="header-greeting">Hi there</div>
+          </div>
           <div class="suggestion-chips" id="initial-suggestions">
             <!-- Suggestions will be loaded dynamically from admin settings -->
           </div>
@@ -202,24 +234,24 @@
       }
 
       /* NUCLEAR SVG FIX - Force all SVG elements to be visible with white stroke */
-      #ai-chatbot-widget svg,
-      #ai-chatbot-widget svg *,
-      button svg,
-      button svg * {
+      #ai-chatbot-widget svg:not(.header-close-btn svg),
+      #ai-chatbot-widget svg *:not(.header-close-btn svg *),
+      button:not(.header-close-btn) svg,
+      button:not(.header-close-btn) svg * {
         opacity: 1 !important;
         visibility: visible !important;
         forced-color-adjust: none !important;
       }
 
-      #ai-chatbot-widget svg path,
-      #ai-chatbot-widget svg line,
-      #ai-chatbot-widget svg circle,
-      #ai-chatbot-widget svg rect,
-      #ai-chatbot-widget svg polyline,
-      #ai-chatbot-widget svg polygon,
-      button svg path,
-      button svg line,
-      button svg circle {
+      #ai-chatbot-widget svg path:not(.header-close-btn svg path),
+      #ai-chatbot-widget svg line:not(.header-close-btn svg line),
+      #ai-chatbot-widget svg circle:not(.header-close-btn svg circle),
+      #ai-chatbot-widget svg rect:not(.header-close-btn svg rect),
+      #ai-chatbot-widget svg polyline:not(.header-close-btn svg polyline),
+      #ai-chatbot-widget svg polygon:not(.header-close-btn svg polygon),
+      button:not(.header-close-btn) svg path,
+      button:not(.header-close-btn) svg line,
+      button:not(.header-close-btn) svg circle {
         stroke: #FFFFFF !important;
         opacity: 1 !important;
         visibility: visible !important;
@@ -252,42 +284,78 @@
 
       /* NEW PREMIUM HEADER */
       .chatbot-header {
-        background: linear-gradient(135deg, #4F46E5 0%, #5B52D9 100%) !important;
+        background: #FFFFFF !important;
         padding: 24px 24px;
         position: relative;
-        color: white !important;
+        color: #1F2937 !important;
+        border-bottom: 1px solid #F3F4F6;
       }
 
       .header-content {
         display: flex;
         align-items: center;
+        width: 100%;
+        justify-content: space-between;
         gap: 14px;
       }
 
       .header-logo {
-        width: 60px;
-        height: 60px;
+        width: 120px;
+        height: auto;
+        max-height: 80px;
         object-fit: contain;
         flex-shrink: 0;
       }
 
+      .header-close-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: transparent;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        padding: 0;
+        z-index: 10001; /* Ensure on top */
+      }
+
+      .header-close-btn:hover {
+        background-color: #F3F4F6;
+      }
+      
+      /* Overwrite for Close Button SVG - Make it Dark */
+      #ai-chatbot-widget .header-close-btn svg,
+      #ai-chatbot-widget .header-close-btn svg path,
+      button.header-close-btn svg,
+      button.header-close-btn svg path {
+        stroke: #1F2937 !important;
+        stroke-width: 2 !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        width: 18px !important;
+        height: 18px !important;
+        display: block !important;
+        forced-color-adjust: none !important;
+        fill: none !important;
+      }
+
       .header-text {
-        flex: 1;
+        text-align: left;
+        padding: 0 0 10px 0;
       }
 
       .header-greeting {
-        font-size: 18px;
-        font-weight: 600;
-        color: white !important;
-        line-height: 1.4;
-      }
-
-      .header-subtitle {
-        font-size: 14px;
-        font-weight: 400;
-        color: rgba(255, 255, 255, 0.95) !important;
-        line-height: 1.4;
-        margin-top: 2px;
+        font-size: 16px;
+        font-weight: 500;
+        color: #4B5563 !important;
+        background: #F3F4F6;
+        padding: 8px 12px;
+        border-radius: 12px 12px 12px 4px;
+        display: inline-block;
+        max-width: 85%;
       }
 
       .chatbot-messages {
@@ -932,6 +1000,7 @@
     const window_ = document.getElementById("chatbot-window");
     const input = document.getElementById("chatbot-input");
     const sendBtn = document.getElementById("chatbot-send");
+    const closeBtn = document.getElementById("header-close"); // Add this
 
     const sessionId = getOrCreateSessionId();
 
@@ -976,6 +1045,27 @@
     toggleBtn.addEventListener("click", toggleWidget);
     if (toggleLabel) {
       toggleLabel.addEventListener("click", toggleWidget);
+    }
+    
+    // Add this
+    if (closeBtn) {
+      closeBtn.addEventListener("click", () => {
+        window_.style.display = "none";
+        // Reset toggle button state when closed via X button
+        if (toggleLabel) {
+          toggleLabel.style.display = "inline-flex";
+          toggleLabel.style.visibility = "visible";
+          toggleLabel.style.opacity = "1";
+        }
+        toggleBtn.innerHTML = `
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17 18.4301H13L8.54999 21.39C7.88999 21.83 7 21.3601 7 20.5601V18.4301C4 18.4301 2 16.4301 2 13.4301V7.42999C2 4.42999 4 2.42999 7 2.42999H17C20 2.42999 22 4.42999 22 7.42999V13.4301C22 16.4301 20 18.4301 17 18.4301Z" stroke="white" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12.0001 11.36V11.15C12.0001 10.47 12.4201 10.11 12.8401 9.82001C13.2501 9.54001 13.66 9.18002 13.66 8.52002C13.66 7.60002 12.9201 6.85999 12.0001 6.85999C11.0801 6.85999 10.3401 7.60002 10.3401 8.52002" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M11.9955 13.75H12.0045" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        `;
+        toggleBtn.setAttribute('aria-label', 'Open chat');
+      });
     }
 
     const handleSend = async () => {
