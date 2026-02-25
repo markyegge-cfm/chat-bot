@@ -284,8 +284,8 @@
 
       .chatbot-window {
         width: 420px;
-        height: 740px;
-        max-height: calc(100vh - 100px);
+        height: 700px;
+        max-height: calc(100vh - 120px);
         background: #FFFFFF !important;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
         border-radius: 20px;
