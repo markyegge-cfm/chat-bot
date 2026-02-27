@@ -62,7 +62,7 @@
 
     // FORCE SVG VISIBILITY - Override any WordPress dark mode interference
     forceSVGVisibility();
-    
+
     // Re-apply SVG fixes periodically to combat WordPress dark mode
     setInterval(forceSVGVisibility, 500);
 
@@ -79,103 +79,110 @@
 
   function forceSVGVisibility() {
     // Force send button SVG
-    const sendSvg = document.querySelector('#chatbot-send svg');
-    const sendPath = document.querySelector('#chatbot-send svg path');
-    
+    const sendSvg = document.querySelector("#chatbot-send svg");
+    const sendPath = document.querySelector("#chatbot-send svg path");
+
     if (sendSvg) {
-      sendSvg.setAttribute('width', '20');
-      sendSvg.setAttribute('height', '20');
-      sendSvg.setAttribute('viewBox', '0 0 20 20');
-      sendSvg.style.width = '20px';
-      sendSvg.style.height = '20px';
-      sendSvg.style.minWidth = '20px';
-      sendSvg.style.minHeight = '20px';
-      sendSvg.style.opacity = '1';
-      sendSvg.style.visibility = 'visible';
-      sendSvg.style.display = 'block';
-      sendSvg.style.transform = 'none';
+      sendSvg.setAttribute("width", "20");
+      sendSvg.setAttribute("height", "20");
+      sendSvg.setAttribute("viewBox", "0 0 20 20");
+      sendSvg.style.width = "20px";
+      sendSvg.style.height = "20px";
+      sendSvg.style.minWidth = "20px";
+      sendSvg.style.minHeight = "20px";
+      sendSvg.style.opacity = "1";
+      sendSvg.style.visibility = "visible";
+      sendSvg.style.display = "block";
+      sendSvg.style.transform = "none";
     }
-    
+
     if (sendPath) {
-      sendPath.setAttribute('stroke', '#FFFFFF');
-      sendPath.setAttribute('stroke-width', '2');
-      sendPath.setAttribute('d', 'M17.5 10L2.5 10M17.5 10L11.25 3.75M17.5 10L11.25 16.25');
-      sendPath.style.stroke = '#FFFFFF';
-      sendPath.style.strokeWidth = '2';
-      sendPath.style.opacity = '1';
-      sendPath.style.visibility = 'visible';
-      sendPath.style.fill = 'none';
+      sendPath.setAttribute("stroke", "#FFFFFF");
+      sendPath.setAttribute("stroke-width", "2");
+      sendPath.setAttribute(
+        "d",
+        "M17.5 10L2.5 10M17.5 10L11.25 3.75M17.5 10L11.25 16.25",
+      );
+      sendPath.style.stroke = "#FFFFFF";
+      sendPath.style.strokeWidth = "2";
+      sendPath.style.opacity = "1";
+      sendPath.style.visibility = "visible";
+      sendPath.style.fill = "none";
     }
 
     // Force toggle button SVG
-    const toggleSvg = document.querySelector('#chatbot-toggle svg');
-    const togglePaths = document.querySelectorAll('#chatbot-toggle svg path');
-    
+    const toggleSvg = document.querySelector("#chatbot-toggle svg");
+    const togglePaths = document.querySelectorAll("#chatbot-toggle svg path");
+
     if (toggleSvg) {
-      toggleSvg.setAttribute('width', '24');
-      toggleSvg.setAttribute('height', '24');
-      toggleSvg.setAttribute('viewBox', '0 0 24 24');
-      toggleSvg.style.width = '24px';
-      toggleSvg.style.height = '24px';
-      toggleSvg.style.minWidth = '24px';
-      toggleSvg.style.minHeight = '24px';
-      toggleSvg.style.opacity = '1';
-      toggleSvg.style.visibility = 'visible';
-      toggleSvg.style.display = 'block';
-      toggleSvg.style.transform = 'none';
+      toggleSvg.setAttribute("width", "24");
+      toggleSvg.setAttribute("height", "24");
+      toggleSvg.setAttribute("viewBox", "0 0 24 24");
+      toggleSvg.style.width = "24px";
+      toggleSvg.style.height = "24px";
+      toggleSvg.style.minWidth = "24px";
+      toggleSvg.style.minHeight = "24px";
+      toggleSvg.style.opacity = "1";
+      toggleSvg.style.visibility = "visible";
+      toggleSvg.style.display = "block";
+      toggleSvg.style.transform = "none";
     }
-    
-    togglePaths.forEach(path => {
-      path.setAttribute('stroke', '#FFFFFF');
-      path.setAttribute('stroke-width', '1.5');
-      path.style.stroke = '#FFFFFF';
-      path.style.strokeWidth = '1.5';
-      path.style.opacity = '1';
-      path.style.visibility = 'visible';
-      path.style.fill = 'none';
+
+    togglePaths.forEach((path) => {
+      path.setAttribute("stroke", "#FFFFFF");
+      path.setAttribute("stroke-width", "1.5");
+      path.style.stroke = "#FFFFFF";
+      path.style.strokeWidth = "1.5";
+      path.style.opacity = "1";
+      path.style.visibility = "visible";
+      path.style.fill = "none";
     });
 
     // Force close button SVG (Dark color for white header)
-    const closeBtn = document.querySelector('.header-close-btn');
+    const closeBtn = document.querySelector(".header-close-btn");
     if (closeBtn) {
-      closeBtn.style.setProperty('z-index', '10001', 'important');
-      closeBtn.style.setProperty('display', 'flex', 'important');
-      closeBtn.style.setProperty('align-items', 'center', 'important');
-      closeBtn.style.setProperty('justify-content', 'center', 'important');
-      closeBtn.style.setProperty('background', 'transparent', 'important');
-      closeBtn.style.setProperty('background-color', 'transparent', 'important');
-      closeBtn.style.setProperty('border', 'none', 'important');
-      closeBtn.style.setProperty('box-shadow', 'none', 'important');
+      closeBtn.style.setProperty("z-index", "10001", "important");
+      closeBtn.style.setProperty("display", "flex", "important");
+      closeBtn.style.setProperty("align-items", "center", "important");
+      closeBtn.style.setProperty("justify-content", "center", "important");
+      closeBtn.style.setProperty("background", "transparent", "important");
+      closeBtn.style.setProperty(
+        "background-color",
+        "transparent",
+        "important",
+      );
+      closeBtn.style.setProperty("border", "none", "important");
+      closeBtn.style.setProperty("box-shadow", "none", "important");
       // Override any dark mode filters
-      closeBtn.style.setProperty('filter', 'none', 'important');
-      closeBtn.style.setProperty('backdrop-filter', 'none', 'important');
+      closeBtn.style.setProperty("filter", "none", "important");
+      closeBtn.style.setProperty("backdrop-filter", "none", "important");
     }
 
-    const closeSvg = document.querySelector('.header-close-btn svg');
-    const closePaths = document.querySelectorAll('.header-close-btn svg path');
+    const closeSvg = document.querySelector(".header-close-btn svg");
+    const closePaths = document.querySelectorAll(".header-close-btn svg path");
 
     if (closeSvg) {
-      closeSvg.style.setProperty('width', '24px', 'important');
-      closeSvg.style.setProperty('height', '24px', 'important');
-      closeSvg.setAttribute('width', '24');
-      closeSvg.setAttribute('height', '24');
-      closeSvg.style.setProperty('min-width', '24px', 'important');
-      closeSvg.style.setProperty('min-height', '24px', 'important');
-      closeSvg.style.setProperty('opacity', '1', 'important');
-      closeSvg.style.setProperty('visibility', 'visible', 'important');
-      closeSvg.style.setProperty('display', 'block', 'important');
-      closeSvg.style.setProperty('transform', 'none', 'important');
-      closeSvg.setAttribute('viewBox', '0 0 24 24');
+      closeSvg.style.setProperty("width", "24px", "important");
+      closeSvg.style.setProperty("height", "24px", "important");
+      closeSvg.setAttribute("width", "24");
+      closeSvg.setAttribute("height", "24");
+      closeSvg.style.setProperty("min-width", "24px", "important");
+      closeSvg.style.setProperty("min-height", "24px", "important");
+      closeSvg.style.setProperty("opacity", "1", "important");
+      closeSvg.style.setProperty("visibility", "visible", "important");
+      closeSvg.style.setProperty("display", "block", "important");
+      closeSvg.style.setProperty("transform", "none", "important");
+      closeSvg.setAttribute("viewBox", "0 0 24 24");
     }
 
-    closePaths.forEach(path => {
-      path.setAttribute('stroke', '#1F2937');
-      path.setAttribute('stroke-width', '2');
-      path.style.setProperty('stroke', '#1F2937', 'important');
-      path.style.setProperty('stroke-width', '2px', 'important');
-      path.style.setProperty('opacity', '1', 'important');
-      path.style.setProperty('visibility', 'visible', 'important');
-      path.style.setProperty('fill', 'none', 'important');
+    closePaths.forEach((path) => {
+      path.setAttribute("stroke", "#1F2937");
+      path.setAttribute("stroke-width", "2");
+      path.style.setProperty("stroke", "#1F2937", "important");
+      path.style.setProperty("stroke-width", "2px", "important");
+      path.style.setProperty("opacity", "1", "important");
+      path.style.setProperty("visibility", "visible", "important");
+      path.style.setProperty("fill", "none", "important");
     });
   }
 
@@ -243,6 +250,16 @@
 
     const style = document.createElement("style");
     style.textContent = `
+      /* Bot pop-up animation */
+      #ai-chatbot-widget {
+        transform: translateY(100%);
+        opacity: 0;
+        transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.6s;
+      }
+      #ai-chatbot-widget.bot-popup-animate {
+        transform: translateY(0);
+        opacity: 1;
+      }
       /* Force light mode - override any dark mode from parent site */
       #ai-chatbot-widget,
       #ai-chatbot-widget * {
@@ -1054,7 +1071,7 @@
     const toggleWidget = () => {
       const isOpen = window_.style.display === "none";
       window_.style.display = isOpen ? "flex" : "none";
-      
+
       // Change toggle button icon and label visibility
       if (isOpen) {
         // Widget is opening - hide label, show X
@@ -1069,7 +1086,7 @@
             <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
         `;
-        toggleBtn.setAttribute('aria-label', 'Close chat');
+        toggleBtn.setAttribute("aria-label", "Close chat");
         input.focus();
       } else {
         // Widget is closing - show label, show chat icon
@@ -1085,7 +1102,7 @@
             <path d="M11.9955 13.75H12.0045" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         `;
-        toggleBtn.setAttribute('aria-label', 'Open chat');
+        toggleBtn.setAttribute("aria-label", "Open chat");
       }
     };
 
@@ -1093,7 +1110,7 @@
     if (toggleLabel) {
       toggleLabel.addEventListener("click", toggleWidget);
     }
-    
+
     // Add this
     if (closeBtn) {
       closeBtn.addEventListener("click", () => {
@@ -1111,7 +1128,7 @@
             <path d="M11.9955 13.75H12.0045" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         `;
-        toggleBtn.setAttribute('aria-label', 'Open chat');
+        toggleBtn.setAttribute("aria-label", "Open chat");
       });
     }
 
@@ -1130,9 +1147,11 @@
       }
 
       // Also remove the greeting message
-      const greetingMsg = document.querySelector(".chatbot-messages .header-text");
+      const greetingMsg = document.querySelector(
+        ".chatbot-messages .header-text",
+      );
       if (greetingMsg) {
-        greetingMsg.remove(); 
+        greetingMsg.remove();
       }
 
       // Add typing indicator
@@ -1223,7 +1242,7 @@
               .split("|")
               .map((q) => q.trim())
               .filter((q) => q);
-            
+
             if (questions.length > 0) {
               const followupContainer = document.createElement("div");
               followupContainer.className = "bot-followup-container";
@@ -1478,4 +1497,14 @@
   }
 
   initChatbot();
+
+  // Pop-up animation for bot widget after 5 seconds
+  document.addEventListener("DOMContentLoaded", function () {
+    setTimeout(function () {
+      var widget = document.getElementById("ai-chatbot-widget");
+      if (widget) {
+        widget.classList.add("bot-popup-animate");
+      }
+    }, 5000);
+  });
 })();
