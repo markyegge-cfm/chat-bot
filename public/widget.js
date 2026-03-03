@@ -1498,12 +1498,24 @@
 
   initChatbot();
 
-  // Pop-up animation for bot widget after 5 seconds
+  // Pop-up and open chat after 5 seconds
   document.addEventListener("DOMContentLoaded", function () {
     setTimeout(function () {
       var widget = document.getElementById("ai-chatbot-widget");
       if (widget) {
         widget.classList.add("bot-popup-animate");
+        // Try to open the chat using the same logic as the toggle button
+        var chatWindow = widget.querySelector("#chatbot-window");
+        if (chatWindow && chatWindow.style.display !== "flex") {
+          // Find the toggleWidget function and call it
+          if (typeof window.toggleWidget === "function") {
+            window.toggleWidget();
+          } else {
+            // Fallback: simulate click on the toggle button
+            var toggleBtn = widget.querySelector("#chatbot-toggle");
+            if (toggleBtn) toggleBtn.click();
+          }
+        }
       }
     }, 5000);
   });
